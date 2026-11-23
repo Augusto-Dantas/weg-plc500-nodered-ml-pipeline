@@ -162,20 +162,29 @@
 % --- Espaçamento e parágrafos conforme ABNT ---
 \setlength{\parindent}{1.25cm}
 \setlength{\parskip}{0.2cm}
-\setlength{\emergencystretch}{1.5em}
+\setlength{\emergencystretch}{3em}
 
 % --- Configuração de cores para links do PDF (sóbrio para impressão/leitura) ---
+\pdfstringdefDisableCommands{%
+  \def\uppercase#1{#1}%
+  \def\MakeUppercase#1{#1}%
+  \def\MakeTextUppercase#1{#1}%
+}
 \makeatletter
 \hypersetup{
-  pdftitle={\@title},
-  pdfauthor={\@author},
-  pdfsubject={Documento Técnico -- Pipeline de Análise de Dados com WEG PLC500, Modbus TCP/IP e Node-RED},
-  pdfkeywords={WEG PLC500, CODESYS, Modbus TCP/IP, Node-RED, Pipeline de Dados, ESP32, GNSS, NTP, Indústria 4.0},
   colorlinks=true,
   linkcolor=slateink,
   citecolor=wegblue,
   filecolor=wegblue,
   urlcolor=wegblue,
   bookmarksdepth=4
+}
+\AtBeginDocument{%
+  \hypersetup{
+    pdftitle={\imprimirtitulo},
+    pdfauthor={\autorespdf},
+    pdfsubject={Documento Técnico -- Pipeline de Análise de Dados com WEG PLC500, Modbus TCP/IP e Node-RED},
+    pdfkeywords={WEG PLC500, CODESYS, Modbus TCP/IP, Node-RED, Pipeline de Dados, FastAPI, Machine Learning, LLM, Indústria 4.0}
+  }%
 }
 \makeatother

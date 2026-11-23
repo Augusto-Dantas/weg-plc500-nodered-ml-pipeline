@@ -5,6 +5,7 @@ on:
     branches: ["main", "master"]
   pull_request:
     branches: ["main", "master"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -58,3 +59,41 @@ jobs:
       - name: Run E2E contract validation suite (pytest)
         run: |
           PYTHONPATH=python pytest tests_e2e -k "not local_toolchain" -v
+
+  compile-latex-pdf:
+    name: Compile LaTeX Technical Report PDF & Upload Artifact
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install TeX Live and latexmk
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            texlive-latex-base \
+            texlive-latex-recommended \
+            texlive-latex-extra \
+            texlive-fonts-recommended \
+            texlive-pictures \
+            texlive-publishers \
+            texlive-science \
+            texlive-lang-portuguese \
+            texlive-bibtex-extra \
+            latexmk
+
+      - name: Compile LaTeX report and Overleaf ZIP
+        run: |
+          make -C docs/relatorio clean pdf overleaf-zip
+
+      - name: Verify compiled PDF and LaTeX log
+        run: |
+          PDF_PATH="docs/relatorio/Arquitetura e Especificação Técnica de uma Pipeline Híbrida de Análise de Dados Industriais Integrando WEG PLC500, Comunicação Modbus TCP-IP e Orquestração com Node-RED.pdf"
+          test -s "$PDF_PATH"
+          ! grep -E "LaTeX Warning: (Reference|Citation).*undefined|There were undefined (references|citations)" docs/relatorio/main.log
+
+      - name: Upload compiled technical report PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: Arquitetura e Especificação Técnica de uma Pipeline Híbrida de Análise de Dados Industriais Integrando WEG PLC500, Comunicação Modbus TCP-IP e Orquestração com Node-RED
+          path: docs/relatorio/Arquitetura e Especificação Técnica de uma Pipeline Híbrida de Análise de Dados Industriais Integrando WEG PLC500, Comunicação Modbus TCP-IP e Orquestração com Node-RED.pdf

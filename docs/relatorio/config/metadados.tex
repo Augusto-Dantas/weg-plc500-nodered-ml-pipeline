@@ -1,25 +1,22 @@
 % ==============================================================================
 % config/metadados.tex
 % Metadados institucionais centralizados
-% Preencha os placeholders entre colchetes antes da entrega final.
 % ==============================================================================
 
 \titulo{Arquitetura e Especificação Técnica de uma Pipeline Híbrida de Análise de Dados Industriais Integrando WEG PLC500, Comunicação Modbus TCP/IP e Orquestração com Node-RED}
 
-\autor{[Nome Completo do Autor]}
+\autor{Augusto P. Dantas \and Gabriel Simão \and Gabriel Silvano}
+\newcommand{\autorespdf}{Augusto P. Dantas, Gabriel Simão, Gabriel Silvano}
 
-\local{[Cidade -- UF]}
+\local{Jaraguá do Sul -- SC}
 
 \data{2026}
 
-\instituicao{%
-  [Nome da Instituição / Empresa]%
-  \par
-  [Nome do Departamento, Curso ou Diretoria Técnica]}
+\instituicao{Centroweg Senai}
 
 \tipotrabalho{Relatório Técnico}
 
-\orientador[Responsável Técnico / Orientador:]{[Nome do Orientador ou Responsável Técnico]}
+\orientador[Coordenador:]{Lucas de Sousa Santos}
 
 % --- Identificação técnica do documento ---
 \newcommand{\codigorelatorio}{RT-AUT-2026-001}
@@ -27,11 +24,13 @@
 \newcommand{\classificacaodoc}{Documentação de Engenharia e Arquitetura}
 
 \preambulo{%
-  Documento técnico desenvolvido no escopo de Situação de Aprendizagem de
-  Internet das Coisas (IoT), mediante aprovação prévia do professor, apresentando
-  a arquitetura, a especificação, a implementação de referência e o plano de
-  validação de uma pipeline híbrida de análise de dados de sensores simulados por
-  botoeiras em controlador lógico programável WEG PLC500, integrada via protocolo
-  Modbus TCP/IP à plataforma Node-RED para diagnóstico assistido por inteligência
-  artificial e comando de atuadores simulados por LEDs.%
+  Relatório técnico desenvolvido no escopo de Situação de Aprendizagem de
+  Internet das Coisas (IoT) no Centroweg Senai, apresentando a arquitetura, a
+  especificação, a implementação completa e a validação por simulação em gêmeo
+  digital de uma pipeline híbrida de análise de dados industriais integrando
+  controlador lógico programável WEG PLC500 programado em \textit{Structured Text}
+  (IEC~61131-3) via CODESYS, comunicação Modbus TCP/IP, orquestração em cinco
+  abas no Node-RED, inferência de aprendizado de máquina via FastAPI e
+  \textit{scikit-learn}, diagnóstico por modelo de linguagem restrito por
+  JSON Schema Draft 2020-12 e persistência relacional em PostgreSQL.%
 }

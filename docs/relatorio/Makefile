@@ -3,17 +3,20 @@
 # ==============================================================================
 
 MAIN := main
-OVERLEAF_ZIP := overleaf_relatorio_abnt_plc500_n8n.zip
+FINAL_PDF := Arquitetura e Especificação Técnica de uma Pipeline Híbrida de Análise de Dados Industriais Integrando WEG PLC500, Comunicação Modbus TCP-IP e Orquestração com Node-RED.pdf
+OVERLEAF_ZIP := overleaf_relatorio_abnt_plc500_nodered.zip
 TEX_DOCKER_IMAGE := texlive/texlive:latest
 
 .PHONY: pdf docker overleaf-zip clean distclean
 
 pdf:
 	latexmk -pdf $(MAIN).tex
+	mv -f $(MAIN).pdf "$(FINAL_PDF)"
 
 docker:
 	docker run --rm -v "$(CURDIR):/workdir" -w /workdir $(TEX_DOCKER_IMAGE) \
 		latexmk -pdf $(MAIN).tex
+	mv -f $(MAIN).pdf "$(FINAL_PDF)"
 
 overleaf-zip:
 	python3 -c "import os, zipfile; \
@@ -32,4 +35,4 @@ clean:
 	      $(MAIN).brf capitulos/*.aux apendices/*.aux pretextual/*.aux
 
 distclean: clean
-	rm -f $(MAIN).pdf $(OVERLEAF_ZIP)
+	rm -f "$(FINAL_PDF)" $(MAIN).pdf $(OVERLEAF_ZIP)

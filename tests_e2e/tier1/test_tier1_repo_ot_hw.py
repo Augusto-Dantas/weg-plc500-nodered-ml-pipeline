@@ -44,6 +44,14 @@ pytestmark = pytest.mark.tier1
 # ==============================================================================
 
 
+FINAL_REPORT_PDF_NAME = (
+    "Arquitetura e Especificação Técnica de uma Pipeline Híbrida de Análise de Dados "
+    "Industriais Integrando WEG PLC500, Comunicação Modbus TCP-IP e Orquestração com "
+    "Node-RED.pdf"
+)
+OVERLEAF_ZIP_NAME = "overleaf_relatorio_abnt_plc500_nodered.zip"
+
+
 @pytest.mark.area_a
 def test_a_t1_01_latex_report_migration_complete(
     repo_root: Path, docs_relatorio_dir: Path
@@ -51,12 +59,12 @@ def test_a_t1_01_latex_report_migration_complete(
     """A-T1-01: Verify complete ABNT LaTeX report migration under ``docs/relatorio/``."""
     expected_rel = [
         "main.tex",
-        "main.pdf",
+        FINAL_REPORT_PDF_NAME,
         "Makefile",
         ".latexmkrc",
         "README.md",
         "referencias.bib",
-        "overleaf_relatorio_abnt_plc500_n8n.zip",
+        OVERLEAF_ZIP_NAME,
         "config/metadados.tex",
         "config/pacotes.tex",
         "pretextual/abstract.tex",
@@ -76,12 +84,21 @@ def test_a_t1_01_latex_report_migration_complete(
     missing = [rel for rel in expected_rel if not (docs_relatorio_dir / rel).is_file()]
     assert not missing, f"Missing migrated LaTeX artifacts: {missing}"
 
+    legacy_in_docs = [
+        name
+        for name in ("main.pdf", "overleaf_relatorio_abnt_plc500_n8n.zip")
+        if (docs_relatorio_dir / name).exists()
+    ]
+    assert not legacy_in_docs, f"Legacy report artifacts remain in docs/relatorio: {legacy_in_docs}"
+
     forbidden_at_root = [
         "main.tex",
         "main.pdf",
+        FINAL_REPORT_PDF_NAME,
         ".latexmkrc",
         "referencias.bib",
         "overleaf_relatorio_abnt_plc500_n8n.zip",
+        OVERLEAF_ZIP_NAME,
         "config",
         "pretextual",
         "capitulos",
@@ -90,15 +107,15 @@ def test_a_t1_01_latex_report_migration_complete(
     leftover = [name for name in forbidden_at_root if (repo_root / name).exists()]
     assert not leftover, f"Unmigrated LaTeX artifacts remain at repo root: {leftover}"
 
-    main_pdf = docs_relatorio_dir / "main.pdf"
-    assert main_pdf.read_bytes()[:5] == b"%PDF-"
-    doc = pdfium.PdfDocument(str(main_pdf))
+    final_pdf = docs_relatorio_dir / FINAL_REPORT_PDF_NAME
+    assert final_pdf.read_bytes()[:5] == b"%PDF-"
+    doc = pdfium.PdfDocument(str(final_pdf))
     try:
-        assert len(doc) >= 40, f"Expected >= 40 pages in main.pdf, got {len(doc)}"
+        assert len(doc) >= 40, f"Expected >= 40 pages in {FINAL_REPORT_PDF_NAME}, got {len(doc)}"
     finally:
         doc.close()
 
-    zip_path = docs_relatorio_dir / "overleaf_relatorio_abnt_plc500_n8n.zip"
+    zip_path = docs_relatorio_dir / OVERLEAF_ZIP_NAME
     with zipfile.ZipFile(zip_path, "r") as zf:
         members = [m for m in zf.namelist() if not m.endswith("/")]
         assert len(members) == 18
@@ -150,6 +167,7 @@ def test_a_t1_02_git_identity_license_and_env_example(repo_root: Path) -> None:
 @pytest.mark.area_a
 def test_a_t1_03_gitignore_rules_and_zero_tracked_secrets(repo_root: Path) -> None:
     """A-T1-03: Verify ``.gitignore`` rules and zero tracked secrets/envs/venvs."""
+    report_pdf_rel = f"docs/relatorio/{FINAL_REPORT_PDF_NAME}"
     candidates = [
         "GEMINI.md",
         ".venv/bin/python",
@@ -159,13 +177,13 @@ def test_a_t1_03_gitignore_rules_and_zero_tracked_secrets(repo_root: Path) -> No
         "private.key",
         "cert.pem",
         ".agents/teamwork/x",
-        "docs/relatorio/main.pdf",
+        report_pdf_rel,
         "hardware/kicad/plc500_bench.kicad_sch",
     ]
     ignored = git_check_ignore(repo_root, candidates)
     for secret_path in candidates[:8]:
         assert ignored[secret_path] is True, f"{secret_path} must be ignored by .gitignore"
-    assert ignored["docs/relatorio/main.pdf"] is False
+    assert ignored[report_pdf_rel] is False
     assert ignored["hardware/kicad/plc500_bench.kicad_sch"] is False
 
     tracked = git_tracked_files(repo_root)
@@ -286,8 +304,20 @@ def test_a_t1_06_github_actions_ci_workflow_valid(repo_root: Path) -> None:
     assert isinstance(jobs, dict) and jobs, "ci.yml missing 'jobs'"
 
     lower_ci = ci_raw.lower()
-    for tool_kw in ("ruff", "pytest", "flows.json", "init.sql", "plcopen", "kicad"):
+    for tool_kw in (
+        "ruff",
+        "pytest",
+        "flows.json",
+        "init.sql",
+        "plcopen",
+        "kicad",
+        "latexmk",
+        "actions/upload-artifact",
+    ):
         assert tool_kw in lower_ci, f"ci.yml missing validation step referencing {tool_kw!r}"
+    assert FINAL_REPORT_PDF_NAME in ci_raw, (
+        f"ci.yml missing final compiled report filename {FINAL_REPORT_PDF_NAME!r}"
+    )
 
 
 # ==============================================================================

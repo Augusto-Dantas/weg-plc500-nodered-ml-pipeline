@@ -8,15 +8,15 @@
 
 Em coerência com a delimitação estabelecida na Seção~\ref{sec:escopo}, este capítulo especifica o protocolo formal de validação em bancada, os casos de teste obrigatórios, os critérios quantitativos de aceitação e a matriz de análise e mitigação de riscos técnicos para o comissionamento do sistema.
 
-\section{Configuração do Ambiente de Ensaios em Bancada}
+\section{Configuração do Ambiente de Ensaios em Bancada e Gêmeo Digital SIL}
 \label{sec:val_ambiente}
 
-A validação integral da arquitetura deve ser conduzida em bancada didático-industrial composta por:
+A validação integral da arquitetura contempla tanto o comissionamento físico na bancada didático-industrial quanto a verificação automatizada \textbf{\textit{Software-in-the-Loop} (SIL)} por meio do gêmeo digital determinístico implementado em \texttt{python/\allowbreak plc500\_\allowbreak ml/\allowbreak plc\_\allowbreak simulator.py}:
 \begin{itemize}
-  \item Um controlador \textbf{WEG PLC500} alimentado em 24\,Vcc, com o programa \texttt{PLC\_PRG} (Quadro~\ref{quadro:codigo_st}) carregado via interface \texttt{ETH1} (\texttt{192.168.20.10}) e servidor Modbus TCP/IP ativo em \texttt{ETH2} (\texttt{192.168.10.10:502}).
-  \item Quatro botoeiras industriais (três NA em \texttt{DI0}--\texttt{DI2} e uma botoeira tipo cogumelo com trava NF em \texttt{DI3}) e quatro sinalizadores LED de 24\,Vcc conectados em \texttt{DO0}--\texttt{DO3}, conforme a Tabela~\ref{tab:mapeamento_io}.
-  \item Um servidor local (\texttt{192.168.10.20}) executando \textbf{Node-RED} com os pacotes \texttt{node-red-contrib-modbus} e \texttt{node-red-contrib-postgresql}, banco de dados \textbf{PostgreSQL} inicializado com o DDL do Quadro~\ref{quadro:ddl_sql} e conectividade configurada para o endpoint LLM utilizado pelo nó \texttt{http request}.
-  \item Parâmetros nominais de ensaio: ciclo do CLP de $10\,\text{ms}$, \textit{debounce} $T_{db} = 50\,\text{ms}$, \textit{polling} Modbus $T_p = 500\,\text{ms}$, janela deslizante $W = 60\,\text{s}$ e \textit{watchdog} $T_{wd} = 5000\,\text{ms}$.
+  \item \textbf{Controlador WEG PLC500 ou Gêmeo Digital (\texttt{plc\_\allowbreak simulator.py}):} na bancada física, utiliza-se o WEG PLC500 alimentado em 24\,Vcc com \texttt{PLC\_PRG} (Quadro~\ref{quadro:codigo_st}) carregado via \texttt{ETH1} (\texttt{192.168.20.10}) e servidor Modbus TCP/IP ativo em \texttt{ETH2} (\texttt{192.168.10.10:502}). Na verificação automatizada SIL, o simulador \texttt{plc\_\allowbreak simulator.py} (baseado em \texttt{pymodbus}) reproduz com ciclo de varredura de $10\,\text{ms}$ os 23 registradores base zero, o filtro \textit{debounce} \texttt{TON} de $50\,\text{ms}$ em \texttt{DI0..DI2}, a leitura imediata NF em \texttt{DI3}, o \textit{watchdog} configurável em $[2000, 30000]\,\text{ms}$ e a hierarquia estrita de intertravamento de \texttt{FB\_\allowbreak Safety\allowbreak Interlock.st}.
+  \item \textbf{Camada de campo (botoeiras e LEDs):} quatro botoeiras industriais (três NA em \texttt{DI0}--\texttt{DI2} e uma botoeira tipo cogumelo com trava NF em \texttt{DI3}) e quatro sinalizadores LED de 24\,Vcc com resistores limitadores de $2{,}2\,\text{k}\Omega$ conectados em \texttt{DO0}--\texttt{DO3}, conforme a Tabela~\ref{tab:mapeamento_io} e a documentação executiva em \texttt{hardware/}.
+  \item \textbf{Pilha IT (Node-RED v4, PostgreSQL 16 e FastAPI ML):} servidor local (\texttt{192.168.10.20}) executando o fluxo de cinco abas (\texttt{node-red/\allowbreak flows.json}), o banco \textbf{PostgreSQL~16} inicializado com \texttt{node-red/\allowbreak sql/\allowbreak init.sql} (Quadro~\ref{quadro:ddl_sql}), o microsserviço \textbf{FastAPI / scikit-learn} (\texttt{python/\allowbreak plc500\_\allowbreak ml/\allowbreak api.py}) carregado com os modelos treinados em \texttt{python/\allowbreak models/} sobre o dataset sintético de $18\,\text{h}$ a $2\,\text{Hz}$ ($129.600$ amostras brutas e $3.688$ janelas de $60\,\text{s}$ com \textit{stride} de $15\,\text{s}$ e lacunas de purga $\ge 60\,\text{s}$ nas partições $65\%/15\%/20\%$, atingindo ROC-AUC de teste de $0{,}8993$ no \texttt{Isolation\allowbreak Forest} e acurácia de $99{,}73\%$ / Macro-F1 de $0{,}9956$ no \texttt{HistGradient\allowbreak Boosting\allowbreak Classifier} frente ao \texttt{RandomForest\allowbreak Classifier}) e conectividade para o endpoint LLM.
+  \item \textbf{Parâmetros nominais de ensaio:} ciclo do CLP de $10\,\text{ms}$, \textit{debounce} $T_{db} = 50\,\text{ms}$, \textit{polling} Modbus $T_p = 500\,\text{ms}$, janela deslizante $W = 60\,\text{s}$ (\textit{stride} $15\,\text{s}$) e \textit{watchdog} $T_{wd} = 5000\,\text{ms}$.
 \end{itemize}
 
 \section{Casos de Teste Funcionais, Analíticos e de Segurança}
@@ -55,7 +55,7 @@ O Quadro~\ref{quadro:casos_teste} especifica os dez casos de teste obrigatórios
     \texttt{CT-10} & Relatório automático de incidente & Disparar evento crítico (\texttt{CT-05} ou \texttt{CT-07}) com canal de notificação habilitado no Node-RED. & Relatório Markdown contendo janela, métricas, diagnóstico e ações é entregue no canal configurado e marcado como \texttt{relatorio\_enviado=TRUE}. \\
     \hline
   \end{tabularx}
-  \fonte{Elaborado pelo autor (2026).}
+  \fonte{Elaborado pelos autores (2026).}
 \end{quadro}
 
 \section{Critérios Quantitativos de Aceitação}
@@ -82,7 +82,7 @@ Além da aprovação qualitativa nos dez casos de teste do Quadro~\ref{quadro:ca
     Latência fim a fim da geração de relatório automático (com LLM) & $\le 15\,\text{s}$ após evento & \texttt{CT-10} & Diferença entre \texttt{janela\_fim} e carimbo de entrega da notificação \\
     \bottomrule
   \end{tabularx}
-  \fonte{Elaborado pelo autor (2026).}
+  \fonte{Elaborado pelos autores (2026).}
 \end{table}
 
 \section{Análise de Riscos Técnicos e Estratégias de Mitigação}
@@ -113,5 +113,5 @@ A integração entre protocolos industriais legados e agentes baseados em IA exi
     Crescimento excessivo da tabela de telemetria & Baixo & Gravação contínua a cada $500\,\text{ms}$ ($\approx 172{,}8\,\text{mil}$ linhas por dia). & Índice temporal decrescente no PostgreSQL e recomendação de política de retenção ou particionamento diário em operação prolongada. \\
     \hline
   \end{tabularx}
-  \fonte{Elaborado pelo autor (2026).}
+  \fonte{Elaborado pelos autores (2026).}
 \end{quadro}

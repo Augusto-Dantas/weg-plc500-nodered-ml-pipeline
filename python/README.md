@@ -34,8 +34,9 @@ Python analytical, machine learning, FastAPI inference, and OT-faithful Modbus T
 # 3. Start FastAPI inference service (port 8000)
 .venv/bin/uvicorn plc500_ml.api:app --host 0.0.0.0 --port 8000
 
-# 4. Start Modbus TCP PLC simulator locally without root (port 5020 + control API 8502)
-.venv/bin/python -m plc500_ml.plc_simulator --host 0.0.0.0 --modbus-port 5020 --control-port 8502
+# 4. Start Modbus TCP PLC simulator locally without root
+#    (Fault-injection control API uses port 8001 in Docker Compose / .env.example via PLC_SIM_API_PORT=8001 / --api-port 8001, and defaults to 8502 only when PLC_SIM_API_PORT is unset on the CLI)
+.venv/bin/python -m plc500_ml.plc_simulator --host 0.0.0.0 --modbus-port 5020 --api-port 8001
 
 # 5. Lint & run tests
 .venv/bin/ruff check python/

@@ -22,18 +22,18 @@ The system separates physical safety-critical OT interlocks from IT analytics ac
      1. **Emergency Stop (`DI3 = 0` or latched fault)** -> Immediate cut-off of `DO0`/`DO1`/`DO3` and activation of alarm `DO2` (`uiEstado_CLP = 4`, `uiCod_Intertrav = 1`).
      2. **Overtemperature (`DI2 = 1`)** -> Blocks motor `DO0`, opens relief valve `DO1`, activates alarm `DO2` (`uiEstado_CLP = 2`, `uiCod_Intertrav = 2`).
      3. **Modbus Watchdog Timeout (`xFlag_WatchdogAtivo = TRUE`)** -> Safe state de-energizing `DO0`, `DO1`, and `DO3` (`uiEstado_CLP = 3`, `uiCod_Intertrav = 3`).
-     4. **Local Manual Override (`xCmd_HabRemoto = FALSE`)** -> Disables remote actuation (`uiEstado_CLP = 0`, `uiCod_Intertrav = 4`).
+     4. **Local Manual Override (`xCmd_HabRemoto = FALSE`)** -> Disables remote actuation (`uiEstado_CLP = 0`, `uiCod_Intertrav = 0`).
      5. **Remote Normal Operation (`xCmd_HabRemoto = TRUE`)** -> Grants supervisory command authority (`uiEstado_CLP = 1`, `uiCod_Intertrav = 0`).
 
 2. **Hybrid Edge Orchestration & Persistence Layer (`node-red/`):**
-   - **Node-RED** polls the 23-variable 0-based Modbus TCP register map every `500 ms` (`2 Hz`) via `FC01`, `FC02`, `FC03`, and `FC04`, and writes supervisory commands/heartbeats via `FC05`, `FC06`, `FC15`, and `FC16`.
-   - Aggregates `60 s` sliding telemetry windows (`120` samples per window), computes 16-bit wrap-safe modular counter deltas, evaluates deterministic z-score and safety rules, queries the FastAPI ML inference service, validates output payloads against JSON Schema (`diagnostico_atuacao.schema.json`), and logs records into **PostgreSQL** (`telemetria_sensores`, `janelas_analiticas`, `diagnosticos_ia`, `comandos_atuadores`).
+   - **Node-RED** (5-tab flows in `flows.json`) polls the 23-variable 0-based Modbus TCP register map every `500 ms` (`2 Hz`) via `FC01`, `FC02`, `FC03`, and `FC04`, and writes supervisory commands/heartbeats via `FC05`, `FC06`, `FC15`, and `FC16`.
+   - Aggregates `60 s` sliding telemetry windows (`120` samples per window, `15 s` stride), computes 16-bit wrap-safe modular counter deltas, evaluates deterministic z-score and safety rules, queries the FastAPI ML inference service, validates output payloads against JSON Schema Draft 2020-12 (`diagnostico_atuacao.schema.json`), and logs records into **PostgreSQL** across 4 tables (`telemetria_sensores`, `janelas_analiticas`, `diagnosticos_ia`, `comandos_atuadores`) and 3 operational views (`vw_baseline_24h`, `vw_dashboard_status`, `vw_auditoria_vetos`).
 
 3. **Machine Learning & Digital Twin Simulation Layer (`python/`, `data/`):**
-   - **Synthetic Data Generator & Feature Pipeline (`plc500_ml`)**: Generates `18 hours` of `2 Hz` industrial telemetry (`129,600` raw samples and `1,080` aggregated `60 s` windows) covering nominal, degradation, jam, chattering, level-alarm, overtemperature, emergency, and watchdog scenarios.
-   - **Trained Models**: `IsolationForest` anomaly detector and `RandomForestClassifier` 4-class severity classifier (`0 = normal`, `1 = atencao`, `2 = alerta`, `3 = critico`) with deterministic safety post-processing.
-   - **FastAPI Service (`port 8000`)**: Exposes `/health`, `/model/info`, `/predict`, and `/predict/raw-window`.
-   - **Stateful Modbus TCP PLC500 Simulator (`plc_simulator.py`)**: Full digital twin of the WEG PLC500 `10 ms` scan cycle (`FB_DebounceCounter`, `FB_WatchdogHeartbeat`, `FB_SafetyInterlock`) plus a local HTTP fault-injection API (`port 8001`) for automated validation of test cases `CT-01` through `CT-10`.
+   - **Synthetic Data Generator & Feature Pipeline (`plc500_ml`)**: Generates `18 hours` of `2 Hz` industrial telemetry (`129,600` raw samples and `3,688` sliding `60 s` windows with `15 s` stride and `>= 60 s` purge gaps across a `65/15/20` temporal split) covering nominal, degradation, jam, chattering, level-alarm, overtemperature, emergency, and watchdog scenarios.
+   - **Trained Models**: `StandardScaler + IsolationForest` anomaly detector and `HistGradientBoostingClassifier` (benchmarked against `RandomForestClassifier`) 4-class severity classifier (`0 = NORMAL`, `1 = ATENCAO`, `2 = CRITICO`, `3 = EMERGENCIA`) with deterministic safety post-processing.
+   - **FastAPI Service (`port 8000`)**: Exposes `/health`, `/schema`, `/model-info`, `/predict`, and `/predict/raw-window`.
+   - **Stateful Modbus TCP PLC500 Simulator (`plc_simulator.py`)**: Full digital twin of the WEG PLC500 `10 ms` scan cycle (`FB_DebounceCounter`, `FB_WatchdogHeartbeat`, `FB_SafetyInterlock`) plus a local HTTP fault-injection API (`port 8001` in Docker Compose / `.env.example`, or default CLI `8502`) for automated validation of test cases `CT-01` through `CT-10`.
 
 ---
 
@@ -41,11 +41,11 @@ The system separates physical safety-critical OT interlocks from IT analytics ac
 
 | Path | Description |
 | :--- | :--- |
-| [`docs/relatorio/`](docs/relatorio/) | Technical report in LaTeX (`main.tex`, compiled `main.pdf`, `referencias.bib`, and Overleaf package). |
+| [`docs/relatorio/`](docs/relatorio/) | Technical report in LaTeX (`main.tex`, compiled `Arquitetura e Especificação Técnica de uma Pipeline Híbrida de Análise de Dados Industriais Integrando WEG PLC500, Comunicação Modbus TCP-IP e Orquestração com Node-RED.pdf`, `referencias.bib`, and Overleaf package `overleaf_relatorio_abnt_plc500_nodered.zip`). |
 | [`plc/`](plc/) | WEG PLC500 IEC 61131-3 Structured Text (`GVL_Modbus.st`, function blocks, `PLC_PRG.st`), PLCopen TC6 XML v2.01, and 0-based Modbus CSV mapping. |
 | [`python/`](python/) | Python package `plc500_ml` (data generator, feature engineering, model training, FastAPI service, Modbus TCP PLC simulator) and unit/integration test suite. |
-| [`data/`](data/) | Synthetic raw `2 Hz` dataset (`data/raw/`), processed `60 s` feature windows (`data/processed/`), and data dictionary. |
-| [`node-red/`](node-red/) | Node-RED two-tab flows (`flows.json`), JSON Schema Draft-07 (`diagnostico_atuacao.schema.json`), and PostgreSQL DDL (`sql/init.sql`). |
+| [`data/`](data/) | Synthetic raw `2 Hz` dataset (`data/raw/`), processed `60 s` feature windows (`data/processed/`, `3,688` windows with `15 s` stride), and data dictionary. |
+| [`node-red/`](node-red/) | Node-RED 5-tab flows (`flows.json`), JSON Schema Draft 2020-12 (`diagnostico_atuacao.schema.json`), and PostgreSQL DDL (`sql/init.sql`, 4 tables + 3 views `vw_baseline_24h`, `vw_dashboard_status`, `vw_auditoria_vetos`). |
 | [`hardware/`](hardware/) | Bench bill of materials (`bom.csv`), wiring table, CircuiTikZ LaTeX schematics, compiled PDF/SVG/PNG diagrams, and KiCad 8 project (`plc500_bench.kicad_pro`, `plc500_bench.kicad_sch`). |
 | [`tests_e2e/`](tests_e2e/) | End-to-end validation test suite verifying OT contracts, ML models, Modbus TCP simulator (`CT-01..CT-09`), Node-RED flows, SQL DDL, KiCad 8, and repository hygiene. |
 | [`docker-compose.yml`](docker-compose.yml) | Container orchestration for `postgres`, `ml-api`, `node-red`, and optional `plc-simulator` (`sim` profile). |
@@ -106,9 +106,18 @@ make compose-up
 # Render electrical wiring and network layout diagrams (PDF, SVG, 300 DPI PNG)
 make diagrams
 
-# Compile the technical report PDF in docs/relatorio/main.pdf
+# Compile the technical report PDF in docs/relatorio/Arquitetura e Especificação Técnica de uma Pipeline Híbrida de Análise de Dados Industriais Integrando WEG PLC500, Comunicação Modbus TCP-IP e Orquestração com Node-RED.pdf
 make report
 ```
+
+---
+
+## Authors & Institutional Metadata
+
+- **Authors:** **Augusto P. Dantas**, **Gabriel Simão**, **Gabriel Silvano**
+- **Coordinator:** **Lucas de Sousa Santos**
+- **Institution:** **Centroweg Senai**
+- **City:** **Jaraguá do Sul — SC**
 
 ---
 

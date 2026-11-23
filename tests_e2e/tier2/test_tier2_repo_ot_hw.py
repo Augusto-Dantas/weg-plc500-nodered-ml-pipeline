@@ -36,12 +36,20 @@ pytestmark = pytest.mark.tier2
 # ==============================================================================
 
 
+FINAL_REPORT_PDF_NAME = (
+    "Arquitetura e Especificação Técnica de uma Pipeline Híbrida de Análise de Dados "
+    "Industriais Integrando WEG PLC500, Comunicação Modbus TCP-IP e Orquestração com "
+    "Node-RED.pdf"
+)
+OVERLEAF_ZIP_NAME = "overleaf_relatorio_abnt_plc500_nodered.zip"
+
+
 @pytest.mark.area_a
 def test_a_t2_01_overleaf_zip_content_byte_parity_with_tex_sources(
     docs_relatorio_dir: Path,
 ) -> None:
     """A-T2-01: Verify SHA-256 byte-for-byte parity between Overleaf ZIP and disk sources."""
-    zip_path = docs_relatorio_dir / "overleaf_relatorio_abnt_plc500_n8n.zip"
+    zip_path = docs_relatorio_dir / OVERLEAF_ZIP_NAME
     res = verify_overleaf_zip_parity(zip_path, docs_relatorio_dir)
     assert res.ok, f"Overleaf ZIP parity errors: {res.errors}"
     assert res.metadata["matched_count"] == 18
@@ -126,12 +134,13 @@ def test_a_t2_06_latex_makefile_targets_and_clean_ignores(
     exts = [e for e in exts if e not in ("tex", "pdf")]
     assert exts
 
+    report_pdf_rel = f"docs/relatorio/{FINAL_REPORT_PDF_NAME}"
     probes = [f"docs/relatorio/main.{ext}" for ext in exts]
-    probes.extend(["docs/relatorio/main.pdf", "hardware/diagrams/electrical_wiring.pdf"])
+    probes.extend([report_pdf_rel, "hardware/diagrams/electrical_wiring.pdf"])
     ignored = git_check_ignore(repo_root, probes)
     for ext in exts:
         assert ignored[f"docs/relatorio/main.{ext}"] is True, f"Intermediate .{ext} not ignored"
-    assert ignored["docs/relatorio/main.pdf"] is False
+    assert ignored[report_pdf_rel] is False
     assert ignored["hardware/diagrams/electrical_wiring.pdf"] is False
 
 

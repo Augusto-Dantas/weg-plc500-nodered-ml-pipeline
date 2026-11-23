@@ -78,13 +78,15 @@ Para tornar o comportamento do WEG PLC500 plenamente previsível e auditável pe
     \draw[trans, dashed] (emerg.north west) -- ++(-0.5,1.05) -- node[above, sloped, font=\sffamily\scriptsize]{\texttt{DI3=1} + \texttt{Reset}} (auto.south east);
   \end{tikzpicture}%
   }
-  \fonte{Elaborado pelo autor (2026).}
+  \fonte{Elaborado pelos autores (2026).}
 \end{figure}
 
 \section{Implementação em Structured Text (IEC 61131-3)}
 \label{sec:clp_codigo}
 
-O Quadro~\ref{quadro:codigo_st} apresenta a implementação completa de referência do programa principal \texttt{PLC\_PRG} em \textit{Structured Text} para o WEG PLC500. O código separa claramente leitura física filtrada, contadores acumulados de 16~bits, avaliação de \textit{watchdog} sobre o registrador \texttt{uiHeartbeat\_NR}, intertravamento local de sobretemperatura (que força o desligamento do motor e ativa a válvula de resfriamento e o alarme independentemente do Node-RED) e composição da máscara de retorno \texttt{wMascara\_DO\_Real}.
+No repositório do projeto, o firmware IEC 61131-3 é estruturado de forma modular no diretório \texttt{plc/src/} em cinco unidades de organização de programa (POUs) reutilizáveis: (i)~\texttt{GVL\_Modbus.st}, lista de variáveis globais qualificada com \texttt{\{attribute 'qualified\_only'\}} contendo os 23 pontos do contrato Modbus TCP/IP (em que \texttt{HR[0]} é declarado como \texttt{uiHeartbeat\_Sup}, mantendo \texttt{uiHeartbeat\_NR} como alias de compatibilidade documentado); (ii)~\texttt{FB\_DebounceCounter.st}, bloco funcional que encapsula o temporizador \texttt{TON} de $50\,\text{ms}$, o detector de borda \texttt{R\_TRIG} e o contador modular de 16~bits; (iii)~\texttt{FB\_WatchdogHeartbeat.st}, responsável pela validação de limites $[2000, 30000]\,\text{ms}$ (com \textit{fallback} seguro para \texttt{T\#5S}), avaliação de \texttt{tonWatchdog} previamente à atualização de \texttt{uiLastHeartbeat} e cópia para \texttt{uiEcho\_Heartbeat}; (iv)~\texttt{FB\_SafetyInterlock.st}, que implementa a máquina de estados, o rearme por borda de subida e a hierarquia estrita de intertravamento; e (v)~\texttt{PLC\_PRG.st}, programa principal associado à tarefa cíclica \texttt{MainTask} ($10\,\text{ms}$). Adicionalmente, o pacote \texttt{plc/codesys/} disponibiliza o projeto completo no padrão aberto \textbf{PLCopen TC6 XML v2.01} (\texttt{plc500\_project\_plcopen.xml}) para importação direta no CODESYS V3.5 e a tabela de vinculação base zero \texttt{modbus\_mapping.csv}.
+
+O Quadro~\ref{quadro:codigo_st} apresenta a lógica consolidada equivalente de \texttt{PLC\_PRG} em \textit{Structured Text} para o WEG PLC500. O código separa claramente leitura física filtrada, contadores acumulados de 16~bits, avaliação de \textit{watchdog} sobre o registrador \texttt{uiHeartbeat\_NR} (\texttt{uiHeartbeat\_Sup}), rearme seguro de emergência sensível à borda de subida (\texttt{rtReset.Q}), intertravamento local de sobretemperatura e composição da máscara de retorno \texttt{wMascara\_DO\_Real}.
 
 \begin{quadro}[htb]
   \centering
@@ -94,8 +96,8 @@ O Quadro~\ref{quadro:codigo_st} apresenta a implementação completa de referên
   \begin{lstlisting}[language=IECST, basicstyle=\linespread{0.85}\selectfont\ttfamily\tiny\color{slateink}]
 PROGRAM PLC_PRG
 VAR
-  tonDebPresenca, tonDebNivel, tonDebTemp : TON;
-  rtPresenca, rtNivel, rtTemp, rtEmerg    : R_TRIG;
+  tonDebPresenca, tonDebNivel, tonDebTemp      : TON;
+  rtPresenca, rtNivel, rtTemp, rtEmerg, rtReset : R_TRIG;
   tonWatchdog      : TON;
   uiLastHeartbeat  : UINT := 0;
   tWatchdogLimit   : TIME := T#5S;
@@ -126,10 +128,11 @@ IF uiHeartbeat_NR <> uiLastHeartbeat THEN
   uiEcho_Heartbeat := uiHeartbeat_NR;
 END_IF;
 xFlag_WatchdogAtivo := tonWatchdog.Q;
-// 4. Travamento de emergencia (fail-safe) e rearme seguro
+// 4. Travamento de emergencia (fail-safe) e rearme seguro por borda de subida
+rtReset(CLK := xCmd_ResetFalha);
 IF NOT xDI_EmergenciaOK THEN
   xFlag_EmergTravada := TRUE;
-ELSIF xCmd_ResetFalha AND xDI_EmergenciaOK AND (NOT xDI_Sobretemp) THEN
+ELSIF xCmd_ResetFalha AND rtReset.Q AND xDI_EmergenciaOK AND (NOT xDI_Sobretemp) THEN
   xFlag_EmergTravada := FALSE;
 END_IF;
 // 5. Maquina de estados e intertravamento local com precedencia sobre o Node-RED
@@ -138,7 +141,7 @@ IF xFlag_EmergTravada THEN
   %QX0.0 := FALSE; %QX0.1 := FALSE; %QX0.2 := TRUE;  %QX0.3 := FALSE;
 ELSIF xDI_Sobretemp THEN
   uiEstado_CLP := 2; uiCod_Intertrav := 2; // Protecao termica local
-  %QX0.0 := FALSE; %QX0.1 := TRUE;  %QX0.2 := TRUE;  %QX0.3 := NOT xFlag_WatchdogAtivo;
+  %QX0.0 := FALSE; %QX0.1 := TRUE;  %QX0.2 := TRUE;  %QX0.3 := (NOT xFlag_WatchdogAtivo) AND xCmd_HabRemoto;
 ELSIF xFlag_WatchdogAtivo THEN
   uiEstado_CLP := 3; uiCod_Intertrav := 3; // Perda de comunicacao com Node-RED
   %QX0.0 := FALSE; %QX0.1 := xDI_NivelAlto; %QX0.2 := TRUE; %QX0.3 := FALSE;
@@ -150,6 +153,7 @@ ELSIF xCmd_HabRemoto THEN
   %QX0.2 := xCmd_Alarme OR (uiSeveridade_IA >= 2);
   %QX0.3 := TRUE;
 ELSE
+  // Estado INIT (xCmd_HabRemoto = FALSE): uiEstado_CLP := 0; uiCod_Intertrav := 0;
   uiEstado_CLP := 0; uiCod_Intertrav := 0;
   %QX0.0 := FALSE; %QX0.1 := FALSE; %QX0.2 := FALSE; %QX0.3 := FALSE;
 END_IF;
@@ -159,7 +163,7 @@ wMascara_DO_Real := BOOL_TO_WORD(%QX0.0) OR SHL(BOOL_TO_WORD(%QX0.1), 1)
 uiVersao_Mapa := 100;
 END_PROGRAM
   \end{lstlisting}
-  \fonte{Elaborado pelo autor (2026).}
+  \fonte{Elaborado pelos autores (2026).}
 \end{quadro}
 
 Observa-se na seção~5 do Quadro~\ref{quadro:codigo_st} que o LED indicador de operação normal (\texttt{\%QX0.3}) permanece aceso apenas quando não há emergência travada, o modo remoto está habilitado e o \textit{watchdog} está saudável. De modo análogo, o acionamento da válvula de alívio (\texttt{\%QX0.1}) combina o comando supervisório com o disparo local por nível alto (\texttt{xDI\_NivelAlto}) e por sobretemperatura (\texttt{xDI\_Sobretemp}), assegurando resposta determinística em até um ciclo de varredura ($10\,\text{ms}$).
