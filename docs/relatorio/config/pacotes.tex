@@ -29,7 +29,7 @@
 \newcolumntype{C}{>{\Centering\arraybackslash}X}
 
 % --- Citações e referências (abntex2cite) ---
-\usepackage[alf, abnt-etal-list=3, abnt-emphasize=bf]{abntex2cite}
+\usepackage[alf, abnt-etal-list=3]{abntex2cite}
 
 % --- Paleta sóbria de engenharia (para diagramas TikZ e listagens) ---
 \definecolor{wegblue}{RGB}{0, 87, 157}
@@ -59,12 +59,12 @@
 \usepackage{listings}
 
 \lstset{
-  basicstyle=\linespread{0.92}\selectfont\ttfamily\scriptsize\color{slateink},
+  basicstyle=\linespread{0.92}\selectfont\ttfamily\scriptsize\color{black},
   backgroundcolor=\color{codebg},
   frame=single,
   rulecolor=\color{codeborder},
   numbers=left,
-  numberstyle=\tiny\color{codecomment},
+  numberstyle=\tiny\color{black},
   numbersep=7pt,
   tabsize=2,
   breaklines=true,
@@ -77,9 +77,9 @@
   belowskip=3pt,
   columns=flexible,
   keepspaces=true,
-  commentstyle=\itshape\color{codecomment},
-  keywordstyle=\bfseries\color{wegblue},
-  stringstyle=\color{codestring},
+  commentstyle=\normalfont\color{black},
+  keywordstyle=\normalfont\color{black},
+  stringstyle=\color{black},
   literate=
     {á}{{\'a}}1 {à}{{\`a}}1 {â}{{\^a}}1 {ã}{{\~a}}1
     {é}{{\'e}}1 {ê}{{\^e}}1 {í}{{\'i}}1
@@ -159,9 +159,14 @@
 \counterwithout{figure}{chapter}
 \counterwithout{table}{chapter}
 
+% --- Padronização tipográfica do texto acadêmico ---
+% O texto corrido permanece sem negrito; títulos estruturais são formatados
+% pela classe abntex2 e mantêm a hierarquia visual prevista pelo modelo.
+\\renewcommand{\\textbf}[1]{#1}
+
 % --- Espaçamento e parágrafos conforme ABNT ---
 \setlength{\parindent}{1.25cm}
-\setlength{\parskip}{0.2cm}
+\setlength{\parskip}{0pt}
 \setlength{\emergencystretch}{3em}
 
 % --- Configuração de cores para links do PDF (sóbrio para impressão/leitura) ---
@@ -173,10 +178,10 @@
 \makeatletter
 \hypersetup{
   colorlinks=true,
-  linkcolor=slateink,
-  citecolor=wegblue,
-  filecolor=wegblue,
-  urlcolor=wegblue,
+  linkcolor=black,
+  citecolor=black,
+  filecolor=black,
+  urlcolor=black,
   bookmarksdepth=4
 }
 \AtBeginDocument{%
