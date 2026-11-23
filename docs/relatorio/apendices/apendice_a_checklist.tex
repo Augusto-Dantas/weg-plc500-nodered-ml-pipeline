@@ -1,0 +1,35 @@
+% ==============================================================================
+% apendices/apendice_a_checklist.tex
+% Apêndice A — Checklist de Comissionamento e Implantação em Bancada
+% ==============================================================================
+
+\chapter{Checklist de Comissionamento e Implantação em Bancada}
+\label{ap:checklist}
+
+Este apêndice consolida a sequência operacional recomendada para montagem, configuração inicial e verificação pré-ensaio da bancada envolvendo o controlador WEG PLC500, o ambiente CODESYS V3.5, o banco PostgreSQL e o fluxo no Node-RED.
+
+\section{Etapa 1 -- Montagem Elétrica e Verificação de Hardware}
+\begin{enumerate}
+  \item Confirmar alimentação regulada de 24\,Vcc no WEG PLC500 e proteção por disjuntor/fusível adequado à bancada didática.
+  \item Conectar as botoeiras NA em \texttt{DI0} (\texttt{\%IX0.0}), \texttt{DI1} (\texttt{\%IX0.1}) e \texttt{DI2} (\texttt{\%IX0.2}) em configuração PNP (comutando $+24\,\text{Vcc}$ para a entrada).
+  \item Conectar a botoeira de emergência NF em \texttt{DI3} (\texttt{\%IX0.3}), confirmando presença de nível lógico alto (LED indicador da entrada aceso no CLP) em condição de repouso.
+  \item Conectar os quatro sinalizadores LED de 24\,Vcc (ou LEDs discretos com resistores limitadores de $1{,}8\text{--}2{,}2\,\text{k}\Omega$) nas saídas \texttt{DO0}--\texttt{DO3} (\texttt{\%QX0.0}--\texttt{\%QX0.3}) referenciados ao $0\,\text{Vcc}$.
+  \item Conectar o cabo Ethernet de engenharia à porta \texttt{ETH1} e o cabo da sub-rede Modbus dedicada à porta \texttt{ETH2}.
+\end{enumerate}
+
+\section{Etapa 2 -- Configuração do WEG PLC500 no CODESYS V3.5}
+\begin{enumerate}
+  \item Configurar o IP estático \texttt{192.168.20.10/24} na interface \texttt{ETH1} e \texttt{192.168.10.10/24} na interface \texttt{ETH2}.
+  \item Inserir \texttt{Ethernet\_ETH2} e o dispositivo filho \texttt{ModbusTCP\_Server\_Device} (porta \texttt{502}, \textit{Unit ID} \texttt{1}) na árvore de dispositivos.
+  \item Mapear integralmente os endereços base zero conforme a Tabela~\ref{tab:mapa_modbus}, habilitando a opção de atualização contínua das variáveis no ciclo de \texttt{MainTask} ($10\,\text{ms}$).
+  \item Compilar sem erros, realizar \textit{download} de \texttt{PLC\_PRG} (Quadro~\ref{quadro:codigo_st}), colocar o CLP em modo \texttt{RUN} e verificar \texttt{uiVersao\_Mapa = 100} no registrador \texttt{HR[3]}.
+\end{enumerate}
+
+\section{Etapa 3 -- Implantação do PostgreSQL e do Fluxo Node-RED}
+\begin{enumerate}
+  \item No servidor \texttt{192.168.10.20}, verificar conectividade ICMP/TCP na porta \texttt{502} com \texttt{192.168.10.10} e confirmar regra de firewall restringindo a porta 502 apenas ao host do Node-RED.
+  \item Criar a base de dados PostgreSQL dedicada e executar o script DDL do Quadro~\ref{quadro:ddl_sql}, validando a criação das quatro tabelas e do índice \texttt{idx\_tel\_capturado}.
+  \item No gerenciador de paleta do Node-RED (\textit{Manage Palette}), instalar os pacotes \texttt{node-red-contrib-modbus} e \texttt{node-red-contrib-postgresql}, configurando o nó \texttt{Modbus-Client} (\texttt{192.168.10.10:502}, \textit{Unit ID}~\texttt{1}, \textit{timeout}~$1500\,\text{ms}$).
+  \item Estruturar o fluxo conforme a Figura~\ref{fig:fluxo-pipeline-nodered}, inserindo o código JavaScript do Quadro~\ref{quadro:codigo_js} no nó \texttt{function} de análise temporal e o contrato do Quadro~\ref{quadro:json_schema} no nó validador JSON após o nó \texttt{http request}.
+  \item Ativar o modo remoto (\texttt{Coil[4] = TRUE}), confirmar o acendimento do indicador \texttt{L4\_StatusOper} (\texttt{DO3}) e iniciar sequencialmente a execução dos casos de teste \texttt{CT-01} a \texttt{CT-10} do Quadro~\ref{quadro:casos_teste}.
+\end{enumerate}

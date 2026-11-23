@@ -1,0 +1,281 @@
+% ==============================================================================
+% capitulos/03_arquitetura.tex
+% Capítulo 3 — Arquitetura do Sistema e Especificação Técnica
+% Inclui Diagramas TikZ 1 e 2, Tabela de I/Os e Mapa de Registradores Modbus
+% ==============================================================================
+
+\chapter{Arquitetura do Sistema e Especificação Técnica}
+\label{cap:arquitetura}
+
+Este capítulo apresenta a arquitetura detalhada da solução, compreendendo a divisão em camadas OT/IT, a topologia de rede Ethernet, a especificação elétrica e funcional das botoeiras e dos LEDs na bancada do WEG PLC500, o mapa de registradores Modbus TCP/IP e o protocolo sequencial de leitura, atuação e supervisão por \textit{heartbeat}.
+
+\section{Arquitetura Geral em Camadas e Topologia de Rede}
+\label{sec:arq_geral}
+
+O sistema organiza-se em cinco camadas funcionais desacopladas: (i)~\textbf{Camada de Campo Simulada}, constituída por quatro botoeiras digitais e quatro LEDs operando em 24\,Vcc PNP; (ii)~\textbf{Camada de Controle Determinístico (OT)}, executada no WEG PLC500 sob CODESYS V3.5; (iii)~\textbf{Camada de Comunicação Industrial}, baseada no protocolo Modbus TCP/IP em sub-rede dedicada; (iv)~\textbf{Camada de Orquestração, Persistência e Análise Híbrida (IT)}, implementada em Node-RED, PostgreSQL e serviço LLM; e (v)~\textbf{Camada de Observabilidade e Relatórios}, encarregada do despacho automático de diagnósticos operacionais.
+
+Aproveitando as duas interfaces Gigabit Ethernet independentes do WEG PLC500 \cite{weg_plc500_manual}, aplica-se a seguinte segmentação de rede \cite{stouffer_nist_ot}:
+\begin{itemize}
+  \item \textbf{Interface \texttt{ETH1} (Rede de Engenharia):} sub-rede \texttt{192.168.20.0/24}, com o CLP configurado no endereço \texttt{192.168.20.10/24}, reservada à estação de engenharia CODESYS V3.5 (\texttt{192.168.20.50/24}) para programação, depuração e monitoramento de variáveis.
+  \item \textbf{Interface \texttt{ETH2} (Rede de Supervisão Modbus TCP):} sub-rede dedicada \texttt{192.168.10.0/24}, na qual o WEG PLC500 opera como \textit{Modbus TCP Server} em \texttt{192.168.10.10:502} (\textit{Unit ID}~\texttt{1}) e o servidor contendo o Node-RED e o banco PostgreSQL opera em \texttt{192.168.10.20}. O acesso à porta TCP~502 é restrito por firewall exclusivamente ao host \texttt{192.168.10.20}.
+\end{itemize}
+
+A Figura~\ref{fig:arquitetura-geral} representa a arquitetura integrada de camadas e o fluxo de sinais físicos, mensagens Modbus TCP/IP e estruturas analíticas.
+
+\begin{figure}[htb]
+  \centering
+  \caption{Arquitetura geral em camadas OT/IT da pipeline de análise de dados e atuação com Node-RED}
+  \label{fig:arquitetura-geral}
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[
+    node distance=0.8cm and 1.1cm,
+    font=\sffamily\footnotesize,
+    box/.style={
+      rectangle, rounded corners=3pt, draw=#1, fill=#1!8,
+      thick, align=center, minimum height=1.15cm, inner sep=6pt
+    },
+    layer/.style={
+      rectangle, rounded corners=4pt, draw=slateink!55, dashed,
+      fill=steelbg, inner sep=10pt
+    },
+    arr/.style={-{Stealth[length=2.4mm]}, thick, draw=slateink},
+    mbarr/.style={-{Stealth[length=2.4mm]}, very thick, draw=wegblue},
+    safe/.style={-{Stealth[length=2.4mm]}, thick, draw=crimsonalert, densely dashed}
+  ]
+
+    % --- Camada de Campo ---
+    \node[box=tealnode, minimum width=3.6cm] (botoeiras) {%
+      \textbf{4 Botoeiras (24\,Vcc PNP)}\\
+      \texttt{DI0}: Presença (NA)\\
+      \texttt{DI1}: Nível Alto (NA)\\
+      \texttt{DI2}: Sobretemp. (NA)\\
+      \texttt{DI3}: Emergência (\textbf{NF})
+    };
+    \node[box=amberwarn, minimum width=3.6cm, below=1.1cm of botoeiras] (leds) {%
+      \textbf{4 LEDs Atuadores (24\,Vcc)}\\
+      \texttt{DO0}: Motor / Esteira\\
+      \texttt{DO1}: Válvula / Alívio\\
+      \texttt{DO2}: Sinalizador Alarme\\
+      \texttt{DO3}: Status Operação
+    };
+
+    % --- Camada OT: WEG PLC500 ---
+    \node[box=wegblue, minimum width=4.4cm, right=1.5cm of botoeiras, yshift=-0.2cm] (plcprg) {%
+      \textbf{WEG PLC500 -- CODESYS V3.5}\\
+      \texttt{PLC\_PRG} (IEC 61131-3 ST)\\
+      Debounce ($50\,\text{ms}$) + Contadores\\
+      Watchdog ($5\,\text{s}$) + \textbf{Intertrav. Fail-Safe}
+    };
+    \node[box=wegblue, minimum width=4.4cm, below=0.95cm of plcprg] (mbsrv) {%
+      \textbf{Modbus TCP Server}\\
+      Interface \texttt{ETH2}: \texttt{192.168.10.10}\\
+      Porta TCP \texttt{502} | Unit ID \texttt{1}
+    };
+    \node[box=slateink, minimum width=4.4cm, below=0.55cm of mbsrv, minimum height=0.8cm] (eth1) {%
+      \texttt{ETH1}: \texttt{192.168.20.10} (Engenharia CODESYS)
+    };
+
+    % --- Camada IT: Node-RED + IA + PostgreSQL ---
+    \node[box=tealnode, minimum width=4.3cm, right=2.1cm of plcprg, yshift=0.35cm] (nrmb) {%
+      \textbf{Node-RED (\texttt{contrib-modbus})}\\
+      \texttt{Modbus-Read} / \texttt{Flex-Write} (\texttt{.20})\\
+      Polling $T_p=500\,\text{ms}$ + Escrita Coils
+    };
+    \node[box=wegblue, minimum width=4.3cm, below=0.7cm of nrmb] (stats) {%
+      \textbf{Nó \texttt{function} (Estatística)}\\
+      Janela $W=60\,\text{s}$: $\lambda_i$, $D_i$, \textit{Z-score}\\
+      Detecção de \textit{Chattering} / Anomalia
+    };
+    \node[box=crimsonalert, minimum width=4.3cm, below=0.7cm of stats] (llm) {%
+      \textbf{Agente IA (\texttt{http request} + JSON)}\\
+      Diagnóstico + Severidade\\
+      \textbf{Validação Estrita JSON Schema}
+    };
+
+    % --- Persistência e Relatórios ---
+    \node[box=slateink, minimum width=3.5cm, right=1.3cm of nrmb, yshift=-0.55cm] (pg) {%
+      \textbf{PostgreSQL}\\
+      Séries temporais, janelas,\\
+      diagnósticos e auditoria
+    };
+    \node[box=amberwarn, minimum width=3.5cm, below=1.0cm of pg] (rep) {%
+      \textbf{Relatórios Automáticos}\\
+      Alertas críticos e sumários\\
+      (E-mail / Telegram / MD)
+    };
+
+    % --- Agrupadores de camada ---
+    \begin{scope}[on background layer]
+      \node[layer, fit=(botoeiras)(leds), label={[font=\sffamily\bfseries\footnotesize, text=slateink]above:1. Campo Simulado}] (gcampo) {};
+      \node[layer, fit=(plcprg)(mbsrv)(eth1), label={[font=\sffamily\bfseries\footnotesize, text=wegblue]above:2. Camada OT (Controle Determinístico)}] (got) {};
+      \node[layer, fit=(nrmb)(stats)(llm), label={[font=\sffamily\bfseries\footnotesize, text=tealnode]above:3. Camada IT (Fluxos Node-RED)}] (git) {};
+      \node[layer, fit=(pg)(rep), label={[font=\sffamily\bfseries\footnotesize, text=slateink]above:4. Dados e Saída}] (gout) {};
+    \end{scope}
+
+    % --- Conexões ---
+    \draw[arr] (botoeiras.east) -- node[above, font=\sffamily\scriptsize]{24\,Vcc} (plcprg.west |- botoeiras.east);
+    \draw[arr] (plcprg.west |- leds.east) -- node[above, font=\sffamily\scriptsize]{Saídas} (leds.east);
+    \draw[safe] (plcprg.south west) -- ++(-0.35,0) |- node[pos=0.25, left, font=\sffamily\tiny, text=crimsonalert]{Veto local} (leds.north east);
+    \draw[arr, <->] (plcprg.south) -- (mbsrv.north);
+
+    \draw[mbarr, <->] (mbsrv.east) -- ++(0.95,0) |- node[pos=0.25, right, font=\sffamily\scriptsize, align=left, text=wegblue]{Modbus TCP/IP\\FC02, FC04\\FC05, FC06, FC15} (nrmb.west);
+
+    \draw[arr] (nrmb.south) -- (stats.north);
+    \draw[arr] (stats.south) -- (llm.north);
+    \draw[arr] (llm.west) -- ++(-0.55,0) |- node[pos=0.25, left, font=\sffamily\tiny, align=right]{Comandos\\validados} ([yshift=-0.25cm]nrmb.west);
+
+    \draw[arr, <->] (nrmb.east) -- ++(0.55,0) |- (pg.west);
+    \draw[arr, <->] (stats.east) -- ++(0.55,0) |- ([yshift=-0.25cm]pg.west);
+    \draw[arr] (llm.east) -- ++(0.55,0) |- ([yshift=-0.45cm]pg.west);
+    \draw[arr] (llm.east) -- ++(0.55,0) |- (rep.west);
+  \end{tikzpicture}%
+  }
+  \fonte{Elaborado pelo autor (2026).}
+\end{figure}
+
+\section{Especificação da Camada de Campo Simulada (Botoeiras e LEDs)}
+\label{sec:arq_campo}
+
+Para simular um subsistema industrial de transporte e controle de fluido sujeito a distúrbios operacionais, utilizam-se quatro das oito entradas digitais nativas e quatro das oito saídas digitais nativas de 24\,Vcc PNP do WEG PLC500, mantendo metade dos canais físicos como reserva para expansões futuras.
+
+A Tabela~\ref{tab:mapeamento_io} especifica a função de cada canal, o tipo de contato elétrico, o endereço IEC 61131-3 e o papel no processo simulado. A entrada \texttt{DI3} (\texttt{B4\_Emergencia}) utiliza obrigatoriamente contato \textbf{Normalmente Fechado (NF)}: em operação normal, o borne recebe $+24\,\text{Vcc}$ (\texttt{TRUE}); tanto o pressionamento do botão quanto eventual rompimento do cabo derrubam o sinal para $0\,\text{Vcc}$ (\texttt{FALSE}), levando o CLP imediatamente ao estado de bloqueio seguro (\textit{fail-safe}) \cite{moraes_castrucci}.
+
+\begin{table}[htb]
+  \centering
+  \SingleSpacing
+  \caption{Mapeamento das entradas (botoeiras) e saídas digitais (LEDs) nativas do WEG PLC500}
+  \label{tab:mapeamento_io}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}p{1.2cm}p{1.3cm}p{2.7cm}p{1.3cm}p{1.8cm}L@{}}
+    \toprule
+    \textbf{Canal} & \textbf{IEC} & \textbf{Identificador} & \textbf{Tipo} & \textbf{Elemento} & \textbf{Semântica Industrial Simulada} \\
+    \midrule
+    \texttt{DI0} & \texttt{\%IX0.0} & \texttt{B1\_SensPresenca} & NA (PNP) & Botoeira 1 & Sensor óptico/indutivo de passagem de peça na esteira (eventos de ciclo) \\
+    \texttt{DI1} & \texttt{\%IX0.1} & \texttt{B2\_SensNivelAlto} & NA (PNP) & Botoeira 2 & Chave de nível máximo de reservatório (indica risco de transbordamento) \\
+    \texttt{DI2} & \texttt{\%IX0.2} & \texttt{B3\_SensSobretemp} & NA (PNP) & Botoeira 3 & Termostato digital de sobretemperatura no conjunto motor-bomba \\
+    \texttt{DI3} & \texttt{\%IX0.3} & \texttt{B4\_Emergencia} & \textbf{NF} (PNP) & Botoeira 4 & Parada de emergência com lógica \textit{fail-safe} (\texttt{FALSE} = emergência ativa) \\
+    \midrule
+    \texttt{DO0} & \texttt{\%QX0.0} & \texttt{L1\_AtuMotor} & PNP 24\,V & LED Verde & Comando do motor/esteira principal (desligado em falha crítica/emergência) \\
+    \texttt{DO1} & \texttt{\%QX0.1} & \texttt{L2\_AtuValvula} & PNP 24\,V & LED Amarelo & Acionamento de válvula solenoide ou bomba auxiliar de alívio/resfriamento \\
+    \texttt{DO2} & \texttt{\%QX0.2} & \texttt{L3\_SinalAlarme} & PNP 24\,V & LED Vermelho & Sinalizador óptico/sonoro de anomalia crítica, watchdog ou emergência \\
+    \texttt{DO3} & \texttt{\%QX0.3} & \texttt{L4\_StatusOper} & PNP 24\,V & LED Branco & Indicador de operação normal com enlace Modbus TCP/IP saudável \\
+    \bottomrule
+  \end{tabularx}
+  \fonte{Elaborado pelo autor (2026).}
+\end{table}
+
+Cada saída digital PNP de 24\,Vcc aciona um sinaleiro LED industrial de 24\,Vcc (ou LED discreto em série com resistor limitador de $1{,}8\,\text{k}\Omega$ a $2{,}2\,\text{k}\Omega$ / $0{,}5\,\text{W}$), resultando em corrente nominal de aproximadamente $10\,\text{mA}$ por canal.
+
+\section{Mapa de Registradores Modbus TCP/IP}
+\label{sec:arq_modbus}
+
+O contrato de memória entre o WEG PLC500 (\textit{Modbus TCP Server}) e o Node-RED (\textit{Modbus TCP Client}) segrega variáveis de leitura (\textit{Discrete Inputs} e \textit{Input Registers}) e variáveis de escrita supervisória (\textit{Coils} e \textit{Holding Registers}), adotando endereçamento base zero (\textit{0-based}) na PDU \cite{modbus_app_v11b3}. A Tabela~\ref{tab:mapa_modbus} apresenta o mapeamento completo.
+
+\begin{table}[htb]
+  \centering
+  \SingleSpacing
+  \caption{Mapa completo de registradores Modbus TCP/IP expostos pelo WEG PLC500 (Unit ID 1, porta 502)}
+  \label{tab:mapa_modbus}
+  \scriptsize
+  \begin{tabularx}{\textwidth}{@{}p{2.0cm}p{0.75cm}p{1.2cm}p{3.45cm}L@{}}
+    \toprule
+    \textbf{Área Modbus} & \textbf{End.} & \textbf{FC} & \textbf{Variável PLC500} & \textbf{Descrição Funcional e Faixa de Valores} \\
+    \midrule
+    \multirow{6}{2.0cm}{\textit{Discrete Inputs} (Leitura, 1 bit)}
+      & \texttt{0} & \texttt{FC02} & \texttt{xDI\_Presenca} & Estado filtrado (\textit{debounce}) de \texttt{B1\_SensPresenca} \\
+      & \texttt{1} & \texttt{FC02} & \texttt{xDI\_NivelAlto} & Estado filtrado de \texttt{B2\_SensNivelAlto} \\
+      & \texttt{2} & \texttt{FC02} & \texttt{xDI\_Sobretemp} & Estado filtrado de \texttt{B3\_SensSobretemp} \\
+      & \texttt{3} & \texttt{FC02} & \texttt{xDI\_EmergenciaOK} & Estado físico NF de \texttt{B4\_Emergencia} (\texttt{0} = atuada/fio partido) \\
+      & \texttt{4} & \texttt{FC02} & \texttt{xFlag\_EmergTravada} & \texttt{1} se emergência travada aguardando rearme seguro \\
+      & \texttt{5} & \texttt{FC02} & \texttt{xFlag\_WatchdogAtivo} & \texttt{1} se \textit{heartbeat} do Node-RED expirou ($> T_{wd}$) \\
+    \midrule
+    \multirow{5}{2.0cm}{\textit{Coils} (Leitura/Escrita, 1 bit)}
+      & \texttt{0} & \texttt{FC01/05} & \texttt{xCmd\_Motor} & Comando supervisório do Node-RED para \texttt{L1\_AtuMotor} \\
+      & \texttt{1} & \texttt{FC01/05} & \texttt{xCmd\_Valvula} & Comando supervisório do Node-RED para \texttt{L2\_AtuValvula} \\
+      & \texttt{2} & \texttt{FC01/05} & \texttt{xCmd\_Alarme} & Comando supervisório do Node-RED para \texttt{L3\_SinalAlarme} \\
+      & \texttt{3} & \texttt{FC01/05} & \texttt{xCmd\_ResetFalha} & Pulso de rearme de falha (válido somente se \texttt{DI3=1} e \texttt{DI2=0}) \\
+      & \texttt{4} & \texttt{FC01/05} & \texttt{xCmd\_HabRemoto} & Habilita modo automático supervisionado pelo Node-RED (\texttt{1} = ativo) \\
+    \midrule
+    \multirow{8}{2.0cm}{\textit{Input Registers} (Leitura, 16 bits)}
+      & \texttt{0} & \texttt{FC04} & \texttt{uiCnt\_Presenca} & Contador acumulado de bordas de subida de \texttt{B1} (0--65535) \\
+      & \texttt{1} & \texttt{FC04} & \texttt{uiCnt\_NivelAlto} & Contador acumulado de acionamentos de \texttt{B2} (0--65535) \\
+      & \texttt{2} & \texttt{FC04} & \texttt{uiCnt\_Sobretemp} & Contador acumulado de acionamentos de \texttt{B3} (0--65535) \\
+      & \texttt{3} & \texttt{FC04} & \texttt{uiCnt\_Emergencia} & Contador acumulado de eventos de emergência em \texttt{B4} \\
+      & \texttt{4} & \texttt{FC04} & \texttt{uiEstado\_CLP} & Código da máquina de estados: \texttt{0}=INIT, \texttt{1}=AUTO, \texttt{2}=ALERTA, \texttt{3}=DEGRADADO, \texttt{4}=EMERG \\
+      & \texttt{5} & \texttt{FC04} & \texttt{wMascara\_DO\_Real} & Bitmask das saídas físicas reais (\texttt{bit0=DO0}..\texttt{bit3=DO3}) \\
+      & \texttt{6} & \texttt{FC04} & \texttt{uiEcho\_Heartbeat} & Eco do último valor de \textit{heartbeat} recebido do Node-RED \\
+      & \texttt{7} & \texttt{FC04} & \texttt{uiCod\_Intertrav} & Causa de veto local: \texttt{0}=Nenhum, \texttt{1}=Emerg., \texttt{2}=Sobretemp., \texttt{3}=Watchdog \\
+    \midrule
+    \multirow{4}{2.0cm}{\textit{Holding Registers} (Leitura/Escrita, 16 bits)}
+      & \texttt{0} & \texttt{FC03/06} & \texttt{uiHeartbeat\_NR} & Contador cíclico (1--65535) incrementado pelo Node-RED a cada ciclo \\
+      & \texttt{1} & \texttt{FC03/06} & \texttt{uiTimeout\_WD\_ms} & Limiar configurável do \textit{watchdog} em ms (padrão: \texttt{5000}) \\
+      & \texttt{2} & \texttt{FC03/06} & \texttt{uiSeveridade\_IA} & Severidade reportada pela pipeline: \texttt{0}=NORMAL, \texttt{1}=ATENCAO, \texttt{2}=CRITICO, \texttt{3}=EMERG \\
+      & \texttt{3} & \texttt{FC03/06} & \texttt{uiVersao\_Mapa} & Identificador de versão do contrato de mapa (valor fixo \texttt{100} = v1.0) \\
+    \bottomrule
+  \end{tabularx}
+  \fonte{Elaborado pelo autor (2026).}
+\end{table}
+
+A leitura combinada de \texttt{wMascara\_DO\_Real} (\textit{Input Register}~\texttt{5}) e \texttt{uiCod\_Intertrav} (\textit{Input Register}~\texttt{7}) permite ao Node-RED auditar em malha fechada se o comando enviado aos \textit{Coils} foi efetivamente aplicado aos LEDs físicos ou se sofreu veto legítimo pelo intertravamento local do CLP.
+
+\section{Dinâmica de Comunicação, Polling e Supervisão de Enlace}
+\label{sec:arq_sequencia}
+
+O fluxo no Node-RED opera com ciclo nominal de varredura $T_p = 500\,\text{ms}$. Em cada ciclo, os nós de leitura do \texttt{node-red-contrib-modbus} requisitam em bloco os 6 \textit{Discrete Inputs} (\texttt{FC02}) e os 8 \textit{Input Registers} (\texttt{FC04}), reduzindo o número de pacotes TCP e assegurando consistência entre estados instantâneos e contadores. Na sequência imediata, um nó \texttt{Modbus-Flex-Write} incrementa o \textit{Holding Register}~\texttt{0} (\texttt{uiHeartbeat\_NR}) via \texttt{FC06}.
+
+Sempre que a análise estatística ou o diagnóstico validado do agente LLM solicita mudança nos atuadores, o Node-RED envia uma escrita múltipla de \textit{Coils} (\texttt{FC15}) e atualiza o nível de severidade em \texttt{uiSeveridade\_IA} (\texttt{FC06}). Caso ocorra desconexão Ethernet ou parada do serviço Node-RED, o temporizador interno do PLC500 identifica a ausência de incremento em \texttt{uiHeartbeat\_NR} após $T_{wd} = 5000\,\text{ms}$ e comuta para o estado seguro degradado, conforme ilustrado na Figura~\ref{fig:sequencia-modbus}.
+
+\begin{figure}[htb]
+  \centering
+  \caption{Diagrama de sequência da comunicação Modbus TCP/IP entre WEG PLC500 e Node-RED}
+  \label{fig:sequencia-modbus}
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[
+    font=\sffamily\footnotesize,
+    actor/.style={rectangle, rounded corners=2pt, draw=wegblue, fill=wegblue!10, thick, minimum width=2.8cm, minimum height=0.8cm, align=center},
+    lifeline/.style={draw=slateink!60, dashed, thick},
+    msg/.style={-{Stealth[length=2.2mm]}, thick, draw=wegblue},
+    ret/.style={-{Stealth[length=2.2mm]}, thick, draw=tealnode, dashed},
+    err/.style={-{Stealth[length=2.2mm]}, thick, draw=crimsonalert, thick}
+  ]
+    % Atores
+    \node[actor] (a1) at (0,0) {\textbf{Botoeiras / LEDs}\\(Campo 24\,Vcc)};
+    \node[actor] (a2) at (4.4,0) {\textbf{WEG PLC500}\\(Modbus Server :502)};
+    \node[actor] (a3) at (9.2,0) {\textbf{Node-RED}\\(\texttt{contrib-modbus})};
+    \node[actor] (a4) at (13.8,0) {\textbf{Agente LLM + PG}\\(IA / Persistência)};
+
+    % Linhas de vida
+    \foreach \x in {0, 4.4, 9.2, 13.8} {
+      \draw[lifeline] (\x,-0.45) -- (\x,-9.2);
+    }
+
+    % Fase 1: Ciclo Nominal de Polling
+    \draw[fill=steelbg, draw=slateink!40, rounded corners=2pt] (-1.3,-0.8) rectangle (15.1,-4.05);
+    \node[anchor=west, font=\sffamily\bfseries\scriptsize, text=wegblue] at (-1.15,-1.05) {Ciclo Nominal de Polling no Node-RED ($T_p = 500\,\text{ms}$)};
+
+    \draw[msg] (0,-1.5) -- node[above, font=\sffamily\scriptsize]{Leitura DI0--DI3 (debounce)} (4.4,-1.5);
+    \draw[msg] (9.2,-1.95) -- node[above, font=\sffamily\scriptsize]{\texttt{Modbus-Read}: \texttt{FC02} (DI 0..5) + \texttt{FC04} (IR 0..7)} (4.4,-1.95);
+    \draw[ret] (4.4,-2.5) -- node[above, font=\sffamily\scriptsize]{\texttt{msg.payload}: estados, contadores, \texttt{wMascara\_DO\_Real}} (9.2,-2.5);
+    \draw[msg] (9.2,-3.05) -- node[above, font=\sffamily\scriptsize]{\texttt{INSERT} telemetria + janela $W=60\,\text{s}$} (13.8,-3.05);
+    \draw[msg] (9.2,-3.65) -- node[above, font=\sffamily\scriptsize]{\texttt{Flex-Write FC06}: \texttt{HR[0] = ++uiHeartbeat\_NR}} (4.4,-3.65);
+
+    % Fase 2: Detecção de Anomalia e Atuação Validada
+    \draw[fill=amberwarn!8, draw=amberwarn!60, rounded corners=2pt] (-1.3,-4.35) rectangle (15.1,-7.05);
+    \node[anchor=west, font=\sffamily\bfseries\scriptsize, text=amberwarn!90!black] at (-1.15,-4.6) {Evento de Anomalia Estatística ou Mudança de Estado};
+
+    \draw[msg] (9.2,-5.05) -- node[above, font=\sffamily\scriptsize]{\texttt{http request}: prompt estruturado (métricas $W$)} (13.8,-5.05);
+    \draw[ret] (13.8,-5.6) -- node[above, font=\sffamily\scriptsize]{Diagnóstico + JSON validado por Schema} (9.2,-5.6);
+    \draw[msg] (9.2,-6.15) -- node[above, font=\sffamily\scriptsize]{\texttt{Flex-Write FC15} (Coils 0..2) + \texttt{FC06} (\texttt{HR[2]=Sev.})} (4.4,-6.15);
+    \draw[msg] (4.4,-6.7) -- node[above, font=\sffamily\scriptsize]{Aplica intertravamento $\rightarrow$ Atualiza LEDs} (0,-6.7);
+
+    % Fase 3: Perda de Comunicação / Watchdog
+    \draw[fill=crimsonalert!7, draw=crimsonalert!60, rounded corners=2pt] (-1.3,-7.35) rectangle (15.1,-8.95);
+    \node[anchor=west, font=\sffamily\bfseries\scriptsize, text=crimsonalert] at (-1.15,-7.6) {Cenário de Falha de Enlace (\textit{Timeout} de \textit{Heartbeat} $> T_{wd} = 5000\,\text{ms}$)};
+
+    \draw[err] (9.2,-8.05) -- node[above, font=\sffamily\scriptsize, text=crimsonalert]{Perda de \texttt{FC06} (\texttt{HR[0]} estagnado)} (6.8,-8.05);
+    \node[font=\sffamily\bfseries\scriptsize, text=crimsonalert] at (6.5,-8.05) {$\times$};
+    \draw[err] (4.4,-8.6) -- node[above, font=\sffamily\scriptsize, text=crimsonalert]{\texttt{DO0=0} (Motor OFF), \texttt{DO2=1} (Alarme), \texttt{DO3=0}} (0,-8.6);
+  \end{tikzpicture}%
+  }
+  \fonte{Elaborado pelo autor (2026).}
+\end{figure}

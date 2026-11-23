@@ -1,0 +1,18 @@
+% ==============================================================================
+% pretextual/simbolos.tex
+% Lista de símbolos utilizados nas formulações técnicas e estatísticas
+% ==============================================================================
+
+\begin{simbolos}
+  \item[$T_p$] Período de varredura (\textit{polling}) do cliente Modbus TCP/IP no Node-RED ($\text{ms}$)
+  \item[$T_{db}$] Tempo de filtragem de \textit{debounce} digital das botoeiras no PLC500 ($\text{ms}$)
+  \item[$T_{wd}$] Limiar de tempo máximo (\textit{timeout}) do \textit{watchdog} de \textit{heartbeat} ($\text{ms}$)
+  \item[$W$] Duração da janela temporal deslizante para agregação analítica ($\text{s}$)
+  \item[$N_i(W)$] Número de bordas de subida (acionamentos) do sensor $i$ na janela $W$
+  \item[$\lambda_i(W)$] Taxa de acionamento do sensor $i$ na janela $W$ ($\text{eventos/min}$)
+  \item[$D_i(W)$] Proporção de tempo em estado ativo (\textit{duty cycle}) do sensor $i$ na janela $W$
+  \item[$\mu_i$] Média histórica da taxa de acionamento do sensor $i$ em regime nominal
+  \item[$\sigma_i$] Desvio-padrão histórico da taxa de acionamento do sensor $i$
+  \item[$z_i(W)$] Escore padronizado (\textit{Z-score}) de anomalia para o sensor $i$ na janela $W$
+  \item[$\epsilon$] Constante positiva de regularização numérica para evitar divisão por zero
+\end{simbolos}

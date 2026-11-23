@@ -1,0 +1,165 @@
+% ==============================================================================
+% capitulos/04_implementacao_clp.tex
+% Capítulo 4 — Implementação da Camada de Controle (WEG PLC500 / CODESYS)
+% Inclui Diagrama TikZ 3 (Máquina de Estados) e Quadro 1 (Código IEC 61131-3 ST)
+% ==============================================================================
+
+\chapter{Implementação da Camada de Controle (WEG PLC500 / CODESYS)}
+\label{cap:implementacao_clp}
+
+Este capítulo especifica a configuração do servidor Modbus TCP/IP no ambiente CODESYS V3.5 para o controlador WEG PLC500, o modelo comportamental em máquina de estados finitos e a implementação de referência da lógica determinística de aquisição, filtragem, supervisão de enlace e intertravamento \textit{fail-safe} em linguagem \textit{Structured Text} (IEC 61131-3).
+
+\section{Configuração no Ambiente CODESYS V3.5}
+\label{sec:clp_codesys}
+
+Conforme a nota de aplicação oficial da WEG para comunicação Modbus TCP no PLC500 \cite{weg_plc500_modbus} e a documentação do ambiente CODESYS V3.5 \cite{codesys_v35}, a exposição das tabelas de memória na interface \texttt{ETH2} requer a estruturação hierárquica da árvore de dispositivos (\textit{Device Tree}) na seguinte ordem:
+
+\begin{enumerate}
+  \item \textbf{Dispositivo Raiz (\texttt{Device -- WEG PLC500}):} configura a tarefa cíclica principal (\texttt{MainTask}) com período determinístico de varredura de $10\,\text{ms}$ e prioridade alta para execução do programa \texttt{PLC\_PRG}.
+  \item \textbf{Adaptador Ethernet (\texttt{Ethernet\_ETH2}):} associado à porta física \texttt{ETH2} do PLC500 com endereço IP estático \texttt{192.168.10.10} e máscara \texttt{255.255.255.0}.
+  \item \textbf{Dispositivo Servidor Modbus (\texttt{ModbusTCP\_Server\_Device}):} inserido como filho de \texttt{Ethernet\_ETH2}, configurado com porta TCP \texttt{502}, \textit{Unit ID} \texttt{1}, máximo de 4 conexões simultâneas e tempo limite de inatividade de \textit{socket} de $10\,\text{s}$.
+  \item \textbf{Mapeamento de Canais (\textit{Modbus Server I/O Mapping}):} vincula os endereços base zero definidos na Tabela~\ref{tab:mapa_modbus} às variáveis globais de interface (\textit{Discrete Inputs} \texttt{0..5}, \textit{Coils} \texttt{0..4}, \textit{Input Registers} \texttt{0..7} e \textit{Holding Registers} \texttt{0..3}), ativando a opção de atualização contínua de variáveis em cada ciclo da tarefa principal.
+\end{enumerate}
+
+As entradas e saídas digitais nativas do PLC500 são mapeadas na seção \textit{Local\_IO} do projeto CODESYS diretamente para os endereços físicos \texttt{\%IX0.0} a \texttt{\%IX0.3} (botoeiras) e \texttt{\%QX0.0} a \texttt{\%QX0.3} (LEDs).
+
+\section{Filtragem de Entradas, Watchdog e Intertravamento de Segurança}
+\label{sec:clp_seguranca}
+
+O software embarcado no CLP concentra todas as decisões críticas de segurança e integridade de sinal, garantindo que imperfeições eletromecânicas ou falhas da camada IT não comprometam o processo:
+
+\begin{itemize}
+  \item \textbf{Filtro de \textit{debounce} digital ($T_{db} = 50\,\text{ms}$):} contatos mecânicos de botoeiras apresentam repique transitório durante a comutação. Cada entrada de processo (\texttt{DI0}--\texttt{DI2}) passa por um temporizador com retardo na energização (\texttt{TON}) de $50\,\text{ms}$ antes de atualizar o sinal filtrado e incrementar seu respectivo contador de borda (\texttt{R\_TRIG}). A entrada de parada de emergência (\texttt{DI3}, contato NF) atua \textbf{sem retardo de energização}, garantindo interrupção imediata no primeiro ciclo de varredura em que o contato abrir.
+  \item \textbf{Supervisão de \textit{heartbeat} (\textit{watchdog}):} a cada ciclo, o CLP compara o registrador \texttt{uiHeartbeat\_NR} com o valor armazenado no ciclo anterior. Enquanto houver mudança, um temporizador \texttt{TON} (\texttt{tonWatchdog}) é reiniciado e o valor é ecoado em \texttt{uiEcho\_Heartbeat}. Se o registrador permanecer inalterado por tempo superior a $T_{wd}$ (padrão $5000\,\text{ms}$, ajustável entre $2000\,\text{ms}$ e $30000\,\text{ms}$), ativa-se \texttt{xFlag\_WatchdogAtivo}.
+  \item \textbf{Hierarquia estrita de precedência de atuação:} a atribuição final das saídas físicas (\texttt{DO0}--\texttt{DO3}) obedece à prioridade decrescente: (1)~Parada de Emergência Travada (\texttt{EMERGENCIA\_TRAVADA}); (2)~Intertravamento local por Sobretemperatura (\texttt{xDI\_Sobretemp}); (3)~Modo Degradado por \textit{Watchdog} (\texttt{MODO\_DEGRADADO\_WD}); (4)~Comandos supervisórios recebidos do Node-RED via Modbus TCP/IP quando \texttt{xCmd\_HabRemoto = TRUE}.
+\end{itemize}
+
+\section{Máquina de Estados Finitos do Controlador}
+\label{sec:clp_estados}
+
+Para tornar o comportamento do WEG PLC500 plenamente previsível e auditável pela pipeline analítica no Node-RED, o estado operacional é modelado pela máquina de estados finitos apresentada na Figura~\ref{fig:maquina-estados-clp}. O identificador numérico do estado atual é publicado continuamente no \textit{Input Register}~\texttt{4} (\texttt{uiEstado\_CLP}).
+
+\begin{figure}[htb]
+  \centering
+  \caption{Máquina de estados finitos e regras de intertravamento determinístico no WEG PLC500}
+  \label{fig:maquina-estados-clp}
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[
+    font=\sffamily\footnotesize,
+    state/.style={
+      rectangle, rounded corners=8pt, draw=#1, fill=#1!10,
+      very thick, minimum width=3.5cm, minimum height=1.35cm, align=center, inner sep=6pt
+    },
+    trans/.style={-{Stealth[length=2.4mm]}, thick, draw=slateink},
+    crit/.style={-{Stealth[length=2.4mm]}, very thick, draw=crimsonalert},
+    warn/.style={-{Stealth[length=2.4mm]}, thick, draw=amberwarn!90!black}
+  ]
+
+    \node[state=slateink] (init) at (0,0) {\textbf{0: INIT}\\Inicialização e\\verificação NF (\texttt{DI3})};
+    \node[state=tealnode] (auto) at (5.3,0) {\textbf{1: NORMAL\_AUTO}\\Supervisão Node-RED\\\texttt{DO3=1}, \texttt{DO0..2=Coils}};
+    \node[state=amberwarn] (alerta) at (11.2,0) {\textbf{2: ALERTA\_SUPERV.}\\Severidade IA $\ge 1$ ou\\\texttt{DI1/DI2} ativo};
+    \node[state=wegblue] (deg) at (5.3,-3.6) {\textbf{3: MODO\_DEGRADADO}\\Watchdog $> T_{wd}$\\\texttt{DO0=0, DO2=1, DO3=0}};
+    \node[state=crimsonalert] (emerg) at (11.2,-3.6) {\textbf{4: EMERGENCIA\_TRAV.}\\Contato NF \texttt{DI3=0}\\\texttt{DO0=0, DO1=0, DO2=1}};
+
+    % Transições nominais
+    \draw[trans] (init.east) -- node[above, font=\sffamily\scriptsize, align=center]{\texttt{DI3=1} e\\\texttt{HabRemoto=1}} (auto.west);
+    \draw[warn] ([yshift=0.22cm]auto.east) -- node[above, font=\sffamily\scriptsize, align=center]{\texttt{Sev\_IA $\ge$ 1} ou\\\texttt{DI1/DI2=1}} ([yshift=0.22cm]alerta.west);
+    \draw[trans] ([yshift=-0.22cm]alerta.west) -- node[below, font=\sffamily\scriptsize, align=center]{Condição normalizada\\e \texttt{Sev\_IA = 0}} ([yshift=-0.22cm]auto.east);
+
+    % Transições de Watchdog
+    \draw[warn] ([xshift=-0.35cm]auto.south) -- node[left, font=\sffamily\scriptsize, align=right]{Watchdog\\expirado} ([xshift=-0.35cm]deg.north);
+    \draw[trans] ([xshift=0.35cm]deg.north) -- node[right, font=\sffamily\scriptsize, align=left]{Novo \textit{heartbeat}\\e \texttt{DI3=1}} ([xshift=0.35cm]auto.south);
+    \draw[warn] (alerta.south west) -- node[above, sloped, font=\sffamily\scriptsize]{Watchdog expirado} (deg.north east);
+
+    % Transições de Emergência (precedência máxima)
+    \draw[crit] (init.south) |- node[pos=0.72, below, font=\sffamily\scriptsize, text=crimsonalert]{\texttt{DI3 = 0} (Emergência a partir de qualquer estado)} (emerg.south west);
+    \draw[crit] (alerta.south) -- node[right, font=\sffamily\scriptsize, text=crimsonalert]{\texttt{DI3 = 0}} (emerg.north);
+    \draw[crit] (deg.east) -- node[above, font=\sffamily\scriptsize, text=crimsonalert]{\texttt{DI3 = 0}} (emerg.west);
+    \draw[trans, dashed] (emerg.north west) -- ++(-0.5,1.05) -- node[above, sloped, font=\sffamily\scriptsize]{\texttt{DI3=1} + \texttt{Reset}} (auto.south east);
+  \end{tikzpicture}%
+  }
+  \fonte{Elaborado pelo autor (2026).}
+\end{figure}
+
+\section{Implementação em Structured Text (IEC 61131-3)}
+\label{sec:clp_codigo}
+
+O Quadro~\ref{quadro:codigo_st} apresenta a implementação completa de referência do programa principal \texttt{PLC\_PRG} em \textit{Structured Text} para o WEG PLC500. O código separa claramente leitura física filtrada, contadores acumulados de 16~bits, avaliação de \textit{watchdog} sobre o registrador \texttt{uiHeartbeat\_NR}, intertravamento local de sobretemperatura (que força o desligamento do motor e ativa a válvula de resfriamento e o alarme independentemente do Node-RED) e composição da máscara de retorno \texttt{wMascara\_DO\_Real}.
+
+\begin{quadro}[htb]
+  \centering
+  \SingleSpacing
+  \caption{Implementação em Structured Text (IEC 61131-3) do programa \texttt{PLC\_PRG} no WEG PLC500}
+  \label{quadro:codigo_st}
+  \begin{lstlisting}[language=IECST, basicstyle=\linespread{0.85}\selectfont\ttfamily\tiny\color{slateink}]
+PROGRAM PLC_PRG
+VAR
+  tonDebPresenca, tonDebNivel, tonDebTemp : TON;
+  rtPresenca, rtNivel, rtTemp, rtEmerg    : R_TRIG;
+  tonWatchdog      : TON;
+  uiLastHeartbeat  : UINT := 0;
+  tWatchdogLimit   : TIME := T#5S;
+END_VAR
+// 1. Debounce das entradas de processo (DI0..DI2) e leitura imediata NF (DI3)
+tonDebPresenca(IN := %IX0.0, PT := T#50MS);
+tonDebNivel   (IN := %IX0.1, PT := T#50MS);
+tonDebTemp    (IN := %IX0.2, PT := T#50MS);
+xDI_Presenca     := tonDebPresenca.Q;
+xDI_NivelAlto    := tonDebNivel.Q;
+xDI_Sobretemp    := tonDebTemp.Q;
+xDI_EmergenciaOK := %IX0.3; // Contato NF: FALSE = emergencia acionada
+// 2. Contadores acumulados de eventos (Input Registers 0..3)
+rtPresenca(CLK := xDI_Presenca);   IF rtPresenca.Q THEN uiCnt_Presenca  := uiCnt_Presenca + 1; END_IF;
+rtNivel   (CLK := xDI_NivelAlto);  IF rtNivel.Q    THEN uiCnt_NivelAlto := uiCnt_NivelAlto + 1; END_IF;
+rtTemp    (CLK := xDI_Sobretemp);  IF rtTemp.Q     THEN uiCnt_Sobretemp := uiCnt_Sobretemp + 1; END_IF;
+rtEmerg   (CLK := NOT xDI_EmergenciaOK);
+IF rtEmerg.Q THEN uiCnt_Emergencia := uiCnt_Emergencia + 1; END_IF;
+// 3. Supervisao de enlace Modbus TCP/IP (Watchdog via Holding Register 0)
+IF (uiTimeout_WD_ms >= 2000) AND (uiTimeout_WD_ms <= 30000) THEN
+  tWatchdogLimit := UINT_TO_TIME(uiTimeout_WD_ms);
+ELSE
+  tWatchdogLimit := T#5S;
+END_IF;
+tonWatchdog(IN := (uiHeartbeat_NR = uiLastHeartbeat), PT := tWatchdogLimit);
+IF uiHeartbeat_NR <> uiLastHeartbeat THEN
+  uiLastHeartbeat  := uiHeartbeat_NR;
+  uiEcho_Heartbeat := uiHeartbeat_NR;
+END_IF;
+xFlag_WatchdogAtivo := tonWatchdog.Q;
+// 4. Travamento de emergencia (fail-safe) e rearme seguro
+IF NOT xDI_EmergenciaOK THEN
+  xFlag_EmergTravada := TRUE;
+ELSIF xCmd_ResetFalha AND xDI_EmergenciaOK AND (NOT xDI_Sobretemp) THEN
+  xFlag_EmergTravada := FALSE;
+END_IF;
+// 5. Maquina de estados e intertravamento local com precedencia sobre o Node-RED
+IF xFlag_EmergTravada THEN
+  uiEstado_CLP := 4; uiCod_Intertrav := 1;
+  %QX0.0 := FALSE; %QX0.1 := FALSE; %QX0.2 := TRUE;  %QX0.3 := FALSE;
+ELSIF xDI_Sobretemp THEN
+  uiEstado_CLP := 2; uiCod_Intertrav := 2; // Protecao termica local
+  %QX0.0 := FALSE; %QX0.1 := TRUE;  %QX0.2 := TRUE;  %QX0.3 := NOT xFlag_WatchdogAtivo;
+ELSIF xFlag_WatchdogAtivo THEN
+  uiEstado_CLP := 3; uiCod_Intertrav := 3; // Perda de comunicacao com Node-RED
+  %QX0.0 := FALSE; %QX0.1 := xDI_NivelAlto; %QX0.2 := TRUE; %QX0.3 := FALSE;
+ELSIF xCmd_HabRemoto THEN
+  uiCod_Intertrav := 0;
+  uiEstado_CLP := SEL((uiSeveridade_IA > 0) OR xDI_NivelAlto, 1, 2);
+  %QX0.0 := xCmd_Motor;
+  %QX0.1 := xCmd_Valvula OR xDI_NivelAlto; // Alivio garantido em nivel alto
+  %QX0.2 := xCmd_Alarme OR (uiSeveridade_IA >= 2);
+  %QX0.3 := TRUE;
+ELSE
+  uiEstado_CLP := 0; uiCod_Intertrav := 0;
+  %QX0.0 := FALSE; %QX0.1 := FALSE; %QX0.2 := FALSE; %QX0.3 := FALSE;
+END_IF;
+// 6. Espelhamento das saidas fisicas reais em bitmask (Input Register 5)
+wMascara_DO_Real := BOOL_TO_WORD(%QX0.0) OR SHL(BOOL_TO_WORD(%QX0.1), 1)
+                 OR SHL(BOOL_TO_WORD(%QX0.2), 2) OR SHL(BOOL_TO_WORD(%QX0.3), 3);
+uiVersao_Mapa := 100;
+END_PROGRAM
+  \end{lstlisting}
+  \fonte{Elaborado pelo autor (2026).}
+\end{quadro}
+
+Observa-se na seção~5 do Quadro~\ref{quadro:codigo_st} que o LED indicador de operação normal (\texttt{\%QX0.3}) permanece aceso apenas quando não há emergência travada, o modo remoto está habilitado e o \textit{watchdog} está saudável. De modo análogo, o acionamento da válvula de alívio (\texttt{\%QX0.1}) combina o comando supervisório com o disparo local por nível alto (\texttt{xDI\_NivelAlto}) e por sobretemperatura (\texttt{xDI\_Sobretemp}), assegurando resposta determinística em até um ciclo de varredura ($10\,\text{ms}$).

@@ -1,0 +1,322 @@
+% ==============================================================================
+% capitulos/05_implementacao_nodered.tex
+% Capítulo 5 — Implementação da Pipeline Analítica no Node-RED e Persistência
+% Inclui Diagrama TikZ 4, Equações Estatísticas, Quadros 2, 3, 4 e 5
+% ==============================================================================
+
+\chapter{Implementação da Pipeline Analítica no Node-RED e Persistência}
+\label{cap:implementacao_nodered}
+
+Este capítulo detalha a camada de Tecnologia da Informação (IT) responsável pela coleta contínua de dados via Modbus TCP/IP, armazenamento estruturado em PostgreSQL, análise estatística determinística em janelas temporais deslizantes, diagnóstico contextual por agente baseado em LLM com validação estrita por \textit{JSON Schema}, envio de comandos de atuação aos LEDs e emissão automática de relatórios operacionais.
+
+\section{Arquitetura do Fluxo no Node-RED}
+\label{sec:nodered_flow}
+
+A plataforma \textbf{Node-RED} é executada localmente no servidor \texttt{192.168.10.20}, com os pacotes \texttt{node-red-contrib-modbus} e \texttt{node-red-contrib-postgresql} instalados via gerenciador de paleta (\textit{Manage Palette}) \cite{nodered_docs, nodered_contrib_modbus}. O nó de configuração compartilhado \texttt{Modbus-Client} é parametrizado para conexão TCP ao endereço \texttt{192.168.10.10}, porta \texttt{502}, \textit{Unit ID} \texttt{1}, com enfileiramento sequencial de comandos, \textit{timeout} de requisição de $1500\,\text{ms}$ e reconexão automática após $2000\,\text{ms}$ em caso de queda de \textit{socket}.
+
+O fluxo no Node-RED é organizado em dois ramos cooperativos sincronizados pelo PostgreSQL e pelo contexto de aba (\texttt{flow}), conforme representado na Figura~\ref{fig:fluxo-pipeline-nodered}:
+\begin{enumerate}
+  \item \textbf{Ramo de Ingestão Rápida ($T_p = 500\,\text{ms}$):} os nós \texttt{Modbus-Read} (ou um nó \texttt{inject} de $500\,\text{ms}$ acionando nós \texttt{Modbus-Flex-Getter}) leem em bloco as tabelas \texttt{FC02} e \texttt{FC04}, um nó \texttt{function} estrutura o objeto \texttt{msg.payload} com carimbo de tempo UTC, grava o registro bruto na tabela \texttt{telemetria\_sensores} via nó \texttt{postgresql} e comanda um nó \texttt{Modbus-Flex-Write} (\texttt{FC06} em \texttt{HR[0]}) para incrementar o \textit{heartbeat} e manter o \textit{watchdog} do PLC500 ativo.
+  \item \textbf{Ramo Analítico Híbrido e Atuação ($W = 60\,\text{s}$ ou disparo imediato por evento crítico):} consulta as amostras da última janela temporal no PostgreSQL, executa a camada estatística determinística em um nó \texttt{function} (JavaScript), avalia em um nó \texttt{switch} se deve acionar o agente LLM via nó \texttt{http request}, valida a resposta cognitiva contra o \textit{JSON Schema}, envia os comandos de atuação para os \textit{Coils} (\texttt{FC15}) e \texttt{HR[2]} (\texttt{FC06}) através do nó \texttt{Modbus-Flex-Write} e despacha relatórios automáticos quando a severidade atingir nível de atenção ou crítico.
+\end{enumerate}
+
+\begin{figure}[htb]
+  \centering
+  \caption{Fluxograma completo da pipeline híbrida de aquisição, análise estatística, IA e atuação no Node-RED}
+  \label{fig:fluxo-pipeline-nodered}
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[
+    font=\sffamily\footnotesize,
+    proc/.style={rectangle, rounded corners=3pt, draw=#1, fill=#1!10, thick, minimum width=3.2cm, minimum height=0.95cm, align=center, inner sep=5pt},
+    dec/.style={diamond, aspect=2.1, draw=amberwarn!90!black, fill=amberwarn!12, thick, align=center, inner sep=2pt, font=\sffamily\scriptsize},
+    arr/.style={-{Stealth[length=2.2mm]}, thick, draw=slateink}
+  ]
+    % Linha 1: Ingestão e Estatística (esquerda -> direita)
+    \node[proc=slateink] (trig)   at (0,0)    {\textbf{Nó \texttt{inject} / Timer}\\Ciclo $T_p = 500\,\text{ms}$};
+    \node[proc=wegblue]  (mbread) at (4.2,0)  {\textbf{\texttt{Modbus-Read}}\\Leitura \texttt{FC02} + \texttt{FC04}\\+ \texttt{FC06} Heartbeat};
+    \node[proc=tealnode] (pgraw)  at (8.4,0)  {\textbf{Nó \texttt{postgresql}}\\Grava telemetria\\e consulta janela $W$};
+    \node[proc=wegblue]  (stats)  at (12.6,0) {\textbf{Nó \texttt{function} (JS)}\\Calcula $\lambda_i$, $D_i$, $z_i$\\e \textit{chattering}};
+
+    % Linha 2: Decisão, IA, Validação e Escrita (direita -> esquerda)
+    \node[dec]               (decia)   at (12.6,-2.35) {Nó \texttt{switch}:\\Anomalia/sumário?};
+    \node[proc=crimsonalert] (llm)     at (8.4,-2.35)  {\textbf{\texttt{http request} (LLM)}\\Diagnóstico contextual\\e recomendação};
+    \node[dec]               (decjson) at (4.2,-2.35)  {JSON Schema\\válido?};
+    \node[proc=wegblue]      (mbwrite) at (0,-2.35)    {\textbf{\texttt{Modbus-Flex-Write}}\\Escrita \texttt{FC15} (Coils)\\e \texttt{FC06} (\texttt{HR[2]})};
+
+    % Linha 3: Fallback determinístico
+    \node[proc=amberwarn]    (fallback) at (4.2,-4.45) {\textbf{Fallback Seguro}\\Aplica ação estatística\\determinística};
+
+    % Linha 4: Auditoria e Relatórios Automáticos (sem cruzamentos)
+    \node[proc=tealnode]     (pgdiag)   at (8.4,-6.25) {\textbf{Nó \texttt{postgresql}}\\Registra diagnóstico\\e comandos enviados};
+    \node[proc=amberwarn]    (rep)      at (12.6,-6.25){\textbf{Relatório Automático}\\E-mail / Telegram\\(Markdown estruturado)};
+
+    % Conexões Linha 1 -> Linha 2
+    \draw[arr] (trig) -- (mbread);
+    \draw[arr] (mbread) -- (pgraw);
+    \draw[arr] (pgraw) -- (stats);
+    \draw[arr] (stats) -- (decia);
+
+    % Conexões Linha 2
+    \draw[arr] (decia.west) -- node[above, font=\sffamily\scriptsize]{Sim} (llm.east);
+    \draw[arr] (llm.west) -- (decjson.east);
+    \draw[arr] (decjson.west) -- node[above, font=\sffamily\scriptsize]{Sim} (mbwrite.east);
+
+    % Ramo Fallback (JSON inválido / timeout LLM)
+    \draw[arr] (decjson.south) -- node[right, font=\sffamily\scriptsize]{Não} (fallback.north);
+    \draw[arr] (fallback.west) -| ([xshift=0.55cm]mbwrite.south);
+
+    % Ramo Auditoria pós-escrita Modbus (passa livre abaixo do Fallback)
+    \draw[arr] ([xshift=-0.55cm]mbwrite.south) |- (pgdiag.west);
+
+    % Ramo Nominal (sem invocação LLM) -> Auditoria
+    \draw[arr] (decia.south) -- ++(0,-1.25) -| node[pos=0.22, above, font=\sffamily\scriptsize]{Não (Nominal)} (pgdiag.north);
+
+    % Disparo de relatório automático
+    \draw[arr] (pgdiag.east) -- node[above, font=\sffamily\scriptsize]{Sev. $\ge 1$} (rep.west);
+  \end{tikzpicture}%
+  }
+  \fonte{Elaborado pelo autor (2026).}
+\end{figure}
+
+\section{Modelagem Estatística em Janela Temporal Deslizante}
+\label{sec:nodered_estatistica}
+
+A camada determinística avalia o comportamento dinâmico de cada sensor discreto $i \in \{1, 2, 3, 4\}$ sobre uma janela temporal deslizante de duração $W = 60\,\text{s}$ (equivalente a $K = W / T_p = 120$ amostras nominais). Três indicadores quantitativos são extraídos continuamente \cite{chandola_2009}:
+
+\begin{enumerate}
+  \item \textbf{Taxa de acionamento ($\lambda_i$):} obtida pela diferença modular do contador acumulado no CLP (\textit{Input Registers} \texttt{0..3}) entre o início e o término da janela, convertida em eventos por minuto:
+  \begin{equation}
+    \label{eq:taxa_acionamento}
+    \lambda_i(W) = \frac{N_i(W)}{W} \times 60
+  \end{equation}
+  em que $N_i(W) = \left(C_i(t) - C_i(t - W)\right) \bmod 65536$ representa o total de bordas de subida observadas na janela.
+
+  \item \textbf{Proporção de tempo ativo (\textit{duty cycle}, $D_i$):} quantifica a fração de amostras em que o sensor permaneceu em estado de alarme ou acionado:
+  \begin{equation}
+    \label{eq:duty_cycle}
+    D_i(W) = \frac{1}{K} \sum_{k=1}^{K} s_{i,k}
+  \end{equation}
+  onde $s_{i,k} \in \{0, 1\}$ é o estado booleano filtrado do sensor $i$ na amostra $k$.
+
+  \item \textbf{Escore padronizado de anomalia (\textit{Z-score}, $z_i$):} mede o afastamento da taxa atual de acionamentos em relação à linha de base histórica ($\mu_i, \sigma_i$) calculada sobre as últimas 24 horas de operação em regime nominal:
+  \begin{equation}
+    \label{eq:zscore}
+    z_i(W) = \frac{\lambda_i(W) - \mu_i}{\sigma_i + \epsilon}
+  \end{equation}
+  sendo $\epsilon = 0{,}01\,\text{eventos/min}$ uma constante positiva de regularização que previne divisões por zero quando $\sigma_i = 0$.
+\end{enumerate}
+
+O critério estatístico classifica cada janela em quatro níveis de severidade padronizados, apresentados no Quadro~\ref{quadro:severidade}. Essa classificação determina simultaneamente o roteamento no nó \texttt{switch} para invocação do agente LLM e a ação de \textit{fallback} caso a camada cognitiva esteja indisponível.
+
+\begin{quadro}[htb]
+  \centering
+  \SingleSpacing
+  \caption{Matriz determinística de classificação de severidade e política de acionamento da camada híbrida}
+  \label{quadro:severidade}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{|p{1.9cm}|p{1.1cm}|L|p{3.9cm}|}
+    \hline
+    \textbf{Severidade} & \textbf{Código} & \textbf{Condição Estatística / Evento na Janela $W$} & \textbf{Ação no Node-RED e Atuadores} \\
+    \hline
+    \texttt{NORMAL} & \texttt{0} & $|z_1| < 2{,}0$; $D_2 = 0$; $D_3 = 0$; \texttt{DI3=1}; sem watchdog & Persistência regular; \texttt{L1=ON}, \texttt{L2=OFF}, \texttt{L3=OFF}; LLM apenas em sumário periódico \\
+    \hline
+    \texttt{ATENCAO} & \texttt{1} & $2{,}0 \le |z_1| < 3{,}0$ (desvio de cadência) ou $0 < D_2 < 0{,}30$ (nível alto intermitente) & Invoca agente LLM para diagnóstico; avalia acionamento preventivo de \texttt{L2}; registra alerta \\
+    \hline
+    \texttt{CRITICO} & \texttt{2} & $|z_1| \ge 3{,}0$ (\textit{chattering}/bloqueio), $D_2 \ge 0{,}30$, \texttt{DI2=1} (sobretemp.) ou watchdog ativo & Invoca agente LLM; comanda \texttt{L1=OFF}, \texttt{L2=ON}, \texttt{L3=ON}; dispara relatório imediato \\
+    \hline
+    \texttt{EMERGENCIA} & \texttt{3} & \texttt{DI3=0} ou \texttt{xFlag\_EmergTravada=1} & CLP já impõe veto local imediato; agente LLM gera relatório forense de incidente \\
+    \hline
+  \end{tabularx}
+  \fonte{Elaborado pelo autor (2026).}
+\end{quadro}
+
+O Quadro~\ref{quadro:codigo_js} apresenta o código JavaScript de referência implementado no nó \texttt{function} do Node-RED para processar as linhas retornadas pelo PostgreSQL em \texttt{msg.payload}, ler a linha de base do contexto \texttt{flow}, computar as Equações~\eqref{eq:taxa_acionamento}--\eqref{eq:zscore} e preparar a mensagem para o nó \texttt{switch}.
+
+\begin{quadro}[htb]
+  \centering
+  \SingleSpacing
+  \caption{Código JavaScript do nó \texttt{function} no Node-RED para agregação temporal e detecção estatística}
+  \label{quadro:codigo_js}
+  \begin{lstlisting}[language=JavaScript]
+// Entrada: msg.payload contendo array de amostras da janela W=60s vindo do no postgresql
+const amostras = Array.isArray(msg.payload) ? msg.payload : [];
+if (amostras.length === 0) {
+  msg.payload = { status: "SEM_DADOS", acionar_llm: false };
+  return msg;
+}
+
+const inicio = amostras[0];
+const fim    = amostras[amostras.length - 1];
+const K      = amostras.length;
+const W_SEG  = 60;
+const EPS    = 0.01;
+
+// Diferenca modular segura para contadores Modbus UINT (16 bits)
+const deltaMod16 = (atual, anterior) => (atual - anterior + 65536) % 65536;
+
+const nPresenca  = deltaMod16(fim.cnt_presenca, inicio.cnt_presenca);
+const taxaPres   = (nPresenca / W_SEG) * 60;
+const dutyNivel  = amostras.reduce((acc, s) => acc + (s.di_nivel_alto ? 1 : 0), 0) / K;
+const dutyTemp   = amostras.reduce((acc, s) => acc + (s.di_sobretemp  ? 1 : 0), 0) / K;
+const emergAtiva = fim.flag_emerg_travada || !fim.di_emergencia_ok;
+
+// Parametros de baseline lidos do contexto de fluxo (flow) ou da consulta SQL
+const baseCtx   = flow.get("baseline_presenca") || { mu: 12.0, sigma: 2.5 };
+const muPres    = Number(fim.baseline_mu_presenca ?? baseCtx.mu);
+const sigmaPres = Number(fim.baseline_sigma_presenca ?? baseCtx.sigma);
+const zPresenca = (taxaPres - muPres) / (sigmaPres + EPS);
+
+// Classificacao deterministica de severidade e acao de fallback
+let severidade = 0; // 0=NORMAL, 1=ATENCAO, 2=CRITICO, 3=EMERGENCIA
+let fallbackCmd = { cmd_motor: true, cmd_valvula: false, cmd_alarme: false };
+
+if (emergAtiva) {
+  severidade = 3;
+  fallbackCmd = { cmd_motor: false, cmd_valvula: false, cmd_alarme: true };
+} else if (dutyTemp > 0 || dutyNivel >= 0.30 || Math.abs(zPresenca) >= 3.0 || fim.flag_watchdog) {
+  severidade = 2;
+  fallbackCmd = { cmd_motor: false, cmd_valvula: true, cmd_alarme: true };
+} else if (dutyNivel > 0 || Math.abs(zPresenca) >= 2.0) {
+  severidade = 1;
+  fallbackCmd = { cmd_motor: true, cmd_valvula: true, cmd_alarme: false };
+}
+
+msg.payload = {
+  janela_inicio: inicio.capturado_em,
+  janela_fim: fim.capturado_em,
+  amostras_k: K,
+  taxa_presenca_min: Number(taxaPres.toFixed(2)),
+  duty_nivel: Number(dutyNivel.toFixed(3)),
+  duty_sobretemp: Number(dutyTemp.toFixed(3)),
+  zscore_presenca: Number(zPresenca.toFixed(2)),
+  estado_clp: fim.estado_clp,
+  cod_intertravamento: fim.cod_intertrav,
+  severidade_estatistica: severidade,
+  fallback_comandos: fallbackCmd,
+  acionar_llm: severidade >= 1 || flow.get("ciclo_sumario_horario") === true
+};
+return msg;
+  \end{lstlisting}
+  \fonte{Elaborado pelo autor (2026).}
+\end{quadro}
+
+\section{Camada Cognitiva (Agente LLM), Governança por JSON Schema e Relatórios}
+\label{sec:nodered_ia}
+
+Quando \texttt{msg.payload.acionar\_llm} assume valor verdadeiro, o nó \texttt{switch} direciona a mensagem para o ramo cognitivo, onde um nó \texttt{function} monta o \textit{prompt} estruturado contendo o resumo estatístico da janela, o estado atual do PLC500 e os últimos cinco eventos do PostgreSQL, enviando-o via nó \textbf{\texttt{http request}} à API do modelo de linguagem \cite{nodered_docs}. Essa arquitetura suporta tanto provedores em nuvem quanto servidores de inferência locais na rede interna, impondo três salvaguardas obrigatórias:
+
+\begin{enumerate}
+  \item \textbf{Restrição estrutural por \textit{JSON Schema}:} o nó validador JSON do Node-RED confronta a resposta do modelo com o esquema especificado no Quadro~\ref{quadro:json_schema} (\texttt{additionalProperties: false}, tipos booleanos estritos para os comandos de LEDs e enumeração fechada de severidade).
+  \item \textbf{Regra de monotonicidade de segurança:} o nó \texttt{function} pós-validação impede que o modelo rebaixe uma severidade estatística \texttt{CRITICO} ou \texttt{EMERGENCIA} para \texttt{NORMAL} e bloqueia qualquer comando \texttt{cmd\_motor = true} enquanto houver sobretemperatura, nível alto sustentado ou emergência travada, formatando em seguida o payload para o nó \texttt{Modbus-Flex-Write} (\texttt{fc: 15, address: 0, quantity: 3}).
+  \item \textbf{Relatório técnico automatizado:} nos eventos com severidade $\ge 1$ ou nos fechamentos periódicos de turno, os campos \texttt{diagnostico}, \texttt{causa\_provavel} e \texttt{resumo\_executivo} são formatados em Markdown por um nó \texttt{template} e despachados automaticamente por e-mail ou Telegram aos operadores.
+\end{enumerate}
+
+\begin{quadro}[htb]
+  \centering
+  \SingleSpacing
+  \caption{\textit{JSON Schema} obrigatório de validação da saída do agente LLM no Node-RED}
+  \label{quadro:json_schema}
+  \begin{lstlisting}[language=JSON]
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DiagnosticoAtuacaoPLC500",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "severidade", "diagnostico", "causa_provavel",
+    "comandos_atuadores", "requer_relatorio", "resumo_executivo"
+  ],
+  "properties": {
+    "severidade": {
+      "type": "string",
+      "enum": ["NORMAL", "ATENCAO", "CRITICO", "EMERGENCIA"]
+    },
+    "diagnostico": { "type": "string", "minLength": 10, "maxLength": 400 },
+    "causa_provavel": { "type": "string", "minLength": 5, "maxLength": 250 },
+    "comandos_atuadores": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cmd_motor", "cmd_valvula", "cmd_alarme"],
+      "properties": {
+        "cmd_motor":   { "type": "boolean" },
+        "cmd_valvula": { "type": "boolean" },
+        "cmd_alarme":  { "type": "boolean" }
+      }
+    },
+    "requer_relatorio": { "type": "boolean" },
+    "resumo_executivo": { "type": "string", "minLength": 20, "maxLength": 800 }
+  }
+}
+  \end{lstlisting}
+  \fonte{Elaborado pelo autor (2026).}
+\end{quadro}
+
+\section{Persistência e Rastreabilidade em PostgreSQL}
+\label{sec:nodered_postgres}
+
+Para assegurar rastreabilidade forense completa das leituras e decisões automatizadas, utiliza-se o banco de dados relacional \textbf{PostgreSQL} acessado a partir do Node-RED \cite{postgresql_docs}. O esquema relacional separa telemetria bruta de alta cadência, métricas agregadas por janela, diagnósticos emitidos pelo agente LLM (registrando explicitamente quando o \textit{fallback} estatístico foi utilizado) e trilha de auditoria dos comandos escritos via \texttt{Modbus-Flex-Write}. O script DDL completo é apresentado no Quadro~\ref{quadro:ddl_sql}.
+
+\begin{quadro}[htb]
+  \centering
+  \SingleSpacing
+  \caption{Script DDL SQL (PostgreSQL) da base de telemetria, análise híbrida e auditoria de atuação}
+  \label{quadro:ddl_sql}
+  \begin{lstlisting}[language=PGSQL]
+CREATE TABLE IF NOT EXISTS telemetria_sensores (
+  id                  BIGSERIAL PRIMARY KEY,
+  capturado_em        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  di_presenca         BOOLEAN NOT NULL,
+  di_nivel_alto       BOOLEAN NOT NULL,
+  di_sobretemp        BOOLEAN NOT NULL,
+  di_emergencia_ok    BOOLEAN NOT NULL,
+  flag_emerg_travada  BOOLEAN NOT NULL,
+  flag_watchdog       BOOLEAN NOT NULL,
+  cnt_presenca        INTEGER NOT NULL,
+  cnt_nivel_alto      INTEGER NOT NULL,
+  cnt_sobretemp       INTEGER NOT NULL,
+  estado_clp          SMALLINT NOT NULL,
+  mascara_do_real     SMALLINT NOT NULL,
+  cod_intertrav       SMALLINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_tel_capturado ON telemetria_sensores (capturado_em DESC);
+
+CREATE TABLE IF NOT EXISTS janelas_analiticas (
+  id                     BIGSERIAL PRIMARY KEY,
+  janela_inicio          TIMESTAMPTZ NOT NULL,
+  janela_fim             TIMESTAMPTZ NOT NULL,
+  amostras_k             INTEGER NOT NULL,
+  taxa_presenca_min      DOUBLE PRECISION NOT NULL,
+  duty_nivel             DOUBLE PRECISION NOT NULL,
+  duty_sobretemp         DOUBLE PRECISION NOT NULL,
+  zscore_presenca        DOUBLE PRECISION NOT NULL,
+  severidade_estatistica SMALLINT NOT NULL CHECK (severidade_estatistica BETWEEN 0 AND 3)
+);
+
+CREATE TABLE IF NOT EXISTS diagnosticos_ia (
+  id                 BIGSERIAL PRIMARY KEY,
+  janela_id          BIGINT NOT NULL REFERENCES janelas_analiticas (id),
+  criado_em          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  severidade_final   VARCHAR(16) NOT NULL,
+  origem_decisao     VARCHAR(16) NOT NULL CHECK (origem_decisao IN ('LLM', 'FALLBACK_STATS')),
+  diagnostico        TEXT NOT NULL,
+  causa_provavel     TEXT NOT NULL,
+  payload_validado   JSONB NOT NULL,
+  relatorio_enviado  BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS comandos_atuadores (
+  id                 BIGSERIAL PRIMARY KEY,
+  diagnostico_id     BIGINT REFERENCES diagnosticos_ia (id),
+  enviado_em         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  cmd_motor          BOOLEAN NOT NULL,
+  cmd_valvula        BOOLEAN NOT NULL,
+  cmd_alarme         BOOLEAN NOT NULL,
+  severidade_hr2     SMALLINT NOT NULL,
+  mascara_do_confirm SMALLINT,
+  veto_local_clp     BOOLEAN NOT NULL DEFAULT FALSE
+);
+  \end{lstlisting}
+  \fonte{Elaborado pelo autor (2026).}
+\end{quadro}
+
+Com o índice decrescente em \texttt{capturado\_em}, as consultas de janela deslizante de 60 segundos executadas pelos nós do Node-RED mantêm tempo de resposta baixo e previsível, facilitando também a conexão de dashboards operacionais.

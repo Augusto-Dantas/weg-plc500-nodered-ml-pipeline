@@ -1,0 +1,117 @@
+% ==============================================================================
+% capitulos/06_plano_validacao.tex
+% Capítulo 6 — Plano de Validação, Critérios de Aceitação e Análise de Riscos
+% ==============================================================================
+
+\chapter{Plano de Validação, Critérios de Aceitação e Análise de Riscos}
+\label{cap:plano_validacao}
+
+Em coerência com a delimitação estabelecida na Seção~\ref{sec:escopo}, este capítulo especifica o protocolo formal de validação em bancada, os casos de teste obrigatórios, os critérios quantitativos de aceitação e a matriz de análise e mitigação de riscos técnicos para o comissionamento do sistema.
+
+\section{Configuração do Ambiente de Ensaios em Bancada}
+\label{sec:val_ambiente}
+
+A validação integral da arquitetura deve ser conduzida em bancada didático-industrial composta por:
+\begin{itemize}
+  \item Um controlador \textbf{WEG PLC500} alimentado em 24\,Vcc, com o programa \texttt{PLC\_PRG} (Quadro~\ref{quadro:codigo_st}) carregado via interface \texttt{ETH1} (\texttt{192.168.20.10}) e servidor Modbus TCP/IP ativo em \texttt{ETH2} (\texttt{192.168.10.10:502}).
+  \item Quatro botoeiras industriais (três NA em \texttt{DI0}--\texttt{DI2} e uma botoeira tipo cogumelo com trava NF em \texttt{DI3}) e quatro sinalizadores LED de 24\,Vcc conectados em \texttt{DO0}--\texttt{DO3}, conforme a Tabela~\ref{tab:mapeamento_io}.
+  \item Um servidor local (\texttt{192.168.10.20}) executando \textbf{Node-RED} com os pacotes \texttt{node-red-contrib-modbus} e \texttt{node-red-contrib-postgresql}, banco de dados \textbf{PostgreSQL} inicializado com o DDL do Quadro~\ref{quadro:ddl_sql} e conectividade configurada para o endpoint LLM utilizado pelo nó \texttt{http request}.
+  \item Parâmetros nominais de ensaio: ciclo do CLP de $10\,\text{ms}$, \textit{debounce} $T_{db} = 50\,\text{ms}$, \textit{polling} Modbus $T_p = 500\,\text{ms}$, janela deslizante $W = 60\,\text{s}$ e \textit{watchdog} $T_{wd} = 5000\,\text{ms}$.
+\end{itemize}
+
+\section{Casos de Teste Funcionais, Analíticos e de Segurança}
+\label{sec:val_casos}
+
+O Quadro~\ref{quadro:casos_teste} especifica os dez casos de teste obrigatórios (\texttt{CT-01} a \texttt{CT-10}) que cobrem aquisição de sensores, atuação remota pelos nós do Node-RED, persistência SQL, detecção estatística, diagnóstico assistido por IA, resiliência a falhas de contrato JSON, precedência do intertravamento local de segurança e perda de comunicação de rede.
+
+\begin{quadro}[htb]
+  \centering
+  \SingleSpacing
+  \caption{Protocolo de casos de teste funcionais, analíticos e de segurança para validação em bancada}
+  \label{quadro:casos_teste}
+  \scriptsize
+  \begin{tabularx}{\textwidth}{|p{1.05cm}|p{2.45cm}|L|L|}
+    \hline
+    \textbf{ID} & \textbf{Cenário} & \textbf{Procedimento de Estímulo em Bancada} & \textbf{Resultado Esperado (Critério de Aprovação)} \\
+    \hline
+    \texttt{CT-01} & Aquisição e \textit{debounce} das botoeiras & Acionar \texttt{B1}--\texttt{B3} com pulsos curtos ($< 30\,\text{ms}$) e pulsos válidos ($\ge 100\,\text{ms}$), monitorando \texttt{Modbus-Read} (\texttt{FC02}/\texttt{FC04}). & Pulsos $< 50\,\text{ms}$ são rejeitados sem incrementar contadores; pulsos válidos atualizam \texttt{DI0}--\texttt{DI2} e \texttt{IR[0..2]} exatamente em $+1$. \\
+    \hline
+    \texttt{CT-02} & Atuação remota nos LEDs via Node-RED & Em estado \texttt{NORMAL\_AUTO} (\texttt{HabRemoto=1}), enviar \texttt{Coils 0..2} via \texttt{Modbus-Flex-Write} (\texttt{FC15}) alternando \texttt{L1}--\texttt{L3}. & LEDs físicos refletem os comandos em até um ciclo de \textit{polling}; \texttt{IR[5]} (\texttt{wMascara\_DO\_Real}) coincide integralmente com os \textit{Coils}. \\
+    \hline
+    \texttt{CT-03} & Persistência de séries temporais & Manter o fluxo Node-RED ativo por 10 minutos contínuos com acionamentos regulares em \texttt{B1}. & Aproximadamente 1200 registros gravados em \texttt{telemetria\_sensores} sem lacunas superiores a $2\,T_p$ e sem erros de integridade SQL. \\
+    \hline
+    \texttt{CT-04} & Detecção estatística de \textit{chattering} & Pressionar \texttt{B1} repetidamente acima da linha de base ($\mu_1 + 3\sigma_1$) dentro de uma janela $W = 60\,\text{s}$. & Nó \texttt{function} calcula $|z_1| \ge 3{,}0$, eleva \texttt{severidade\_estatistica = 2}, grava \texttt{janelas\_analiticas} e aciona o ramo LLM via nó \texttt{switch}. \\
+    \hline
+    \texttt{CT-05} & Diagnóstico IA com \textit{JSON Schema} & Sustentar \texttt{B2} (nível alto) por $\ge 20\,\text{s}$ na janela $W$ e inspecionar a resposta do ramo LLM no Node-RED. & Resposta validada contra o Quadro~\ref{quadro:json_schema}, \texttt{origem\_decisao='LLM'}, comando \texttt{L2=ON} e \texttt{L3=ON} escritos via Modbus e auditados. \\
+    \hline
+    \texttt{CT-06} & \textit{Fallback} por falha ou violação JSON & Injetar resposta malformada ou simular \textit{timeout} no nó \texttt{http request} durante anomalia ativa em \texttt{B2}. & Validador JSON desvia para o ramo de \textit{fallback}, registra \texttt{FALLBACK\_STATS} e aplica comandos determinísticos seguros nos LEDs. \\
+    \hline
+    \texttt{CT-07} & Precedência local da parada de emergência & Com \texttt{L1=ON} comandado pelo Node-RED, pressionar a botoeira NF \texttt{B4\_Emergencia} (ou abrir o fio de \texttt{DI3}) e enviar \texttt{cmd\_motor=TRUE}. & PLC500 desliga \texttt{L1} e \texttt{L2}, acende \texttt{L3}, apaga \texttt{L4} em $\le 20\,\text{ms}$, trava \texttt{uiEstado\_CLP=4} e ignora comandos remotos até rearme seguro. \\
+    \hline
+    \texttt{CT-08} & Proteção térmica local (\texttt{DI2}) & Acionar \texttt{B3\_SensSobretemp} enquanto o Node-RED solicita \texttt{cmd\_motor=TRUE} e \texttt{cmd\_valvula=FALSE}. & PLC500 veta o motor (\texttt{L1=OFF}), força válvula de resfriamento (\texttt{L2=ON}) e alarme (\texttt{L3=ON}), reportando \texttt{uiCod\_Intertrav=2}. \\
+    \hline
+    \texttt{CT-09} & Perda física de rede e \textit{watchdog} & Com sistema em \texttt{NORMAL\_AUTO} e \texttt{L1=ON}, desconectar fisicamente o cabo Ethernet da porta \texttt{ETH2}. & Em no máximo $T_{wd} = 5\,\text{s}$, CLP entra em \texttt{MODO\_DEGRADADO} (\texttt{uiEstado\_CLP=3}), desliga \texttt{L1}/\texttt{L4} e acende \texttt{L3}; reconexão restaura operação. \\
+    \hline
+    \texttt{CT-10} & Relatório automático de incidente & Disparar evento crítico (\texttt{CT-05} ou \texttt{CT-07}) com canal de notificação habilitado no Node-RED. & Relatório Markdown contendo janela, métricas, diagnóstico e ações é entregue no canal configurado e marcado como \texttt{relatorio\_enviado=TRUE}. \\
+    \hline
+  \end{tabularx}
+  \fonte{Elaborado pelo autor (2026).}
+\end{quadro}
+
+\section{Critérios Quantitativos de Aceitação}
+\label{sec:val_criterios}
+
+Além da aprovação qualitativa nos dez casos de teste do Quadro~\ref{quadro:casos_teste}, o comissionamento completo da bancada condiciona-se ao atendimento simultâneo das metas quantitativas especificadas na Tabela~\ref{tab:criterios_aceitacao}.
+
+\begin{table}[htb]
+  \centering
+  \SingleSpacing
+  \caption{Critérios quantitativos de aceitação para aprovação da arquitetura em bancada}
+  \label{tab:criterios_aceitacao}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}p{3.8cm}p{2.4cm}p{2.3cm}L@{}}
+    \toprule
+    \textbf{Indicador de Desempenho} & \textbf{Meta de Aceitação} & \textbf{Casos Vinculados} & \textbf{Método de Medição na Bancada} \\
+    \midrule
+    Tempo de resposta do intertravamento local (\texttt{DI3}/\texttt{DI2} $\rightarrow$ \texttt{DO}) & $\le 20\,\text{ms}$ ($\le 2$ ciclos CLP) & \texttt{CT-07}, \texttt{CT-08} & Registro interno de \textit{timestamp} no CODESYS Trace \\
+    Latência RTT média de leitura/escrita Modbus TCP (\texttt{ETH2}) & $\le 50\,\text{ms}$ (p95 $\le 150\,\text{ms}$) & \texttt{CT-01}, \texttt{CT-02} & Medição de tempo entre disparo e resposta em nó \texttt{function} no Node-RED \\
+    Tempo de detecção de perda de enlace pelo \textit{watchdog} & $5{,}0\,\text{s} \pm 0{,}2\,\text{s}$ & \texttt{CT-09} & Cronometragem entre desconexão física de \texttt{ETH2} e desligamento de \texttt{DO0}/\texttt{DO3} \\
+    Conformidade de contrato \textit{JSON Schema} antes da escrita Modbus & $100\%$ (zero exceções) & \texttt{CT-05}, \texttt{CT-06} & Auditoria na tabela \texttt{diagnosticos\_ia} e logs do validador no Node-RED \\
+    Atuações indevidas de \texttt{L1} em emergência ou sobretemperatura & $0$ ocorrências & \texttt{CT-07}, \texttt{CT-08} & Consulta SQL verificando \texttt{mascara\_do\_real} quando \texttt{cod\_intertrav} $\in \{1,2\}$ \\
+    Disponibilidade de ingestão em regime contínuo (10\,min) & $\ge 99{,}0\%$ das amostras & \texttt{CT-03} & Contagem de registros em \texttt{telemetria\_sensores} vs.\ esperado ($1200$) \\
+    Latência fim a fim da geração de relatório automático (com LLM) & $\le 15\,\text{s}$ após evento & \texttt{CT-10} & Diferença entre \texttt{janela\_fim} e carimbo de entrega da notificação \\
+    \bottomrule
+  \end{tabularx}
+  \fonte{Elaborado pelo autor (2026).}
+\end{table}
+
+\section{Análise de Riscos Técnicos e Estratégias de Mitigação}
+\label{sec:val_riscos}
+
+A integração entre protocolos industriais legados e agentes baseados em IA exige tratamento explícito de riscos de segurança funcional, cibersegurança e confiabilidade de software \cite{stouffer_nist_ot, iec_62443}. O Quadro~\ref{quadro:riscos} cataloga os principais riscos identificados no projeto e as salvaguardas arquiteturais incorporadas para mitigá-los.
+
+\begin{quadro}[htb]
+  \centering
+  \SingleSpacing
+  \caption{Matriz de análise de riscos técnicos e mecanismos de mitigação incorporados ao projeto}
+  \label{quadro:riscos}
+  \scriptsize
+  \begin{tabularx}{\textwidth}{|p{2.6cm}|p{1.3cm}|L|L|}
+    \hline
+    \textbf{Risco Identificado} & \textbf{Impacto} & \textbf{Causa Raiz Potencial} & \textbf{Mitigação Arquitetural Adotada} \\
+    \hline
+    Acesso não autorizado à porta TCP~502 (Modbus sem TLS) & Alto & Protocolo Modbus TCP/IP trafega em texto claro e sem autenticação nativa. & Isolamento físico na interface \texttt{ETH2} em VLAN/sub-rede dedicada, firewall permitindo apenas IP \texttt{192.168.10.20} e migração futura para OPC~UA/TLS. \\
+    \hline
+    Alucinação ou comando inseguro pelo agente LLM & Alto & Natureza probabilística de modelos de linguagem ou variações de resposta de API. & Validação obrigatória por \textit{JSON Schema} no Node-RED, regra de monotonicidade, \textit{fallback} estatístico e veto físico determinístico no WEG PLC500. \\
+    \hline
+    Perda de conectividade ou travamento do host Node-RED & Alto & Queda de cabo Ethernet, reinicialização do servidor IT ou indisponibilidade do serviço. & Mecanismo de \textit{heartbeat} em \texttt{HR[0]} com \textit{watchdog} de $5\,\text{s}$ no PLC500 forçando desligamento do motor e sinalização de alarme. \\
+    \hline
+    Falsos disparos por trepidação mecânica das botoeiras & Médio & Repique elétrico (\textit{bouncing}) de contatos mecânicos nas entradas \texttt{DI0}--\texttt{DI2}. & Filtro \textit{debounce} por temporizador \texttt{TON} de $50\,\text{ms}$ no CLP e contadores baseados em detecção de borda filtrada (\texttt{R\_TRIG}). \\
+    \hline
+    Rompimento de fiação da parada de emergência & Crítico & Desconexão acidental de borne ou rompimento de condutor em \texttt{DI3}. & Adoção de lógica Normalmente Fechada (NF) \textit{fail-safe} sem retardo de energização e travamento com rearme explícito. \\
+    \hline
+    Crescimento excessivo da tabela de telemetria & Baixo & Gravação contínua a cada $500\,\text{ms}$ ($\approx 172{,}8\,\text{mil}$ linhas por dia). & Índice temporal decrescente no PostgreSQL e recomendação de política de retenção ou particionamento diário em operação prolongada. \\
+    \hline
+  \end{tabularx}
+  \fonte{Elaborado pelo autor (2026).}
+\end{quadro}

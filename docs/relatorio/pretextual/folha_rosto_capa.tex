@@ -1,0 +1,78 @@
+% ==============================================================================
+% pretextual/folha_rosto_capa.tex
+% Customização da Capa e Folha de Rosto conforme ABNT NBR 10719:2015
+% ==============================================================================
+
+% --- Capa conforme ABNT NBR 10719:2015 ---
+\renewcommand{\imprimircapa}{%
+  \begin{capa}%
+    \center
+    {\ABNTEXchapterfont\large\imprimirinstituicao}
+
+    \vspace*{1.5cm}
+
+    {\ABNTEXchapterfont\large\imprimirautor}
+
+    \vfill
+
+    \begin{center}
+      \ABNTEXchapterfont\bfseries\LARGE\imprimirtitulo
+    \end{center}
+
+    \vspace*{0.8cm}
+
+    {\normalsize\codigorelatorio\ -- \versaorelatorio}
+
+    \vfill
+
+    {\large\imprimirlocal}
+    \par
+    {\large\imprimirdata}
+    \vspace*{1cm}
+  \end{capa}%
+}
+
+% --- Folha de rosto conforme ABNT NBR 10719:2015 ---
+\makeatletter
+\renewcommand{\folhaderostocontent}{%
+  \begin{center}
+    {\ABNTEXchapterfont\large\imprimirinstituicao}
+
+    \vspace*{1.2cm}
+
+    {\ABNTEXchapterfont\large\imprimirautor}
+
+    \vspace*{\fill}\vspace*{\fill}
+
+    \begin{center}
+      \ABNTEXchapterfont\bfseries\Large\imprimirtitulo
+    \end{center}
+
+    \vspace*{0.6cm}
+
+    {\small\textbf{Identificação:} \codigorelatorio\ (\versaorelatorio) \quad|\quad \textbf{Classificação:} \classificacaodoc}
+
+    \vspace*{\fill}
+
+    \abntex@ifnotempty{\imprimirpreambulo}{%
+      \hspace{.45\textwidth}
+      \begin{minipage}{.5\textwidth}
+        \SingleSpacing
+        \imprimirpreambulo
+      \end{minipage}%
+      \vspace*{\fill}
+    }%
+
+    {\abntex@ifnotempty{\imprimirorientador}{%
+      \imprimirorientadorRotulo~\imprimirorientador\par
+    }}
+
+    \vspace*{\fill}
+
+    {\large\imprimirlocal}
+    \par
+    {\large\imprimirdata}
+    \vspace*{1cm}
+  \end{center}
+}
+\makeatother

@@ -1,0 +1,181 @@
+% ==============================================================================
+% config/pacotes.tex
+% Pacotes, estilos tipográficos, TikZ, listagens de código e float Quadro
+% Compatível com pdflatex + abntex2 (Overleaf e TeX Live padrão)
+% ==============================================================================
+
+% --- Codificação e fontes ---
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{indentfirst}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{graphicx}
+
+% --- Matemática e símbolos ---
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% --- Tabelas ABNT / IBGE e Quadros ---
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{ragged2e}
+
+% Coluna tabularx com alinhamento à esquerda sem hifenização excessiva
+\newcolumntype{L}{>{\RaggedRight\arraybackslash}X}
+\newcolumntype{C}{>{\Centering\arraybackslash}X}
+
+% --- Citações e referências ABNT (NBR 10520 / NBR 6023) ---
+\usepackage[alf, abnt-etal-list=3, abnt-emphasize=bf]{abntex2cite}
+
+% --- Paleta sóbria de engenharia (para diagramas TikZ e listagens) ---
+\definecolor{wegblue}{RGB}{0, 87, 157}
+\definecolor{slateink}{RGB}{38, 50, 56}
+\definecolor{steelbg}{RGB}{244, 247, 250}
+\definecolor{tealnode}{RGB}{0, 121, 107}
+\definecolor{amberwarn}{RGB}{217, 119, 6}
+\definecolor{crimsonalert}{RGB}{185, 28, 28}
+\definecolor{codebg}{RGB}{248, 249, 251}
+\definecolor{codeborder}{RGB}{203, 213, 225}
+\definecolor{codecomment}{RGB}{100, 116, 139}
+\definecolor{codestring}{RGB}{15, 118, 110}
+
+% --- Diagramas vetoriais nativos em TikZ (apenas bibliotecas padrão) ---
+\usepackage{tikz}
+\usetikzlibrary{
+  arrows.meta,
+  positioning,
+  shapes.geometric,
+  fit,
+  backgrounds,
+  calc,
+  decorations.pathreplacing
+}
+
+% --- Listagens de código com suporte UTF-8 completo em pdflatex ---
+\usepackage{listings}
+
+\lstset{
+  basicstyle=\linespread{0.92}\selectfont\ttfamily\scriptsize\color{slateink},
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{codeborder},
+  numbers=left,
+  numberstyle=\tiny\color{codecomment},
+  numbersep=7pt,
+  tabsize=2,
+  breaklines=true,
+  breakatwhitespace=true,
+  showstringspaces=false,
+  captionpos=t,
+  xleftmargin=12pt,
+  xrightmargin=4pt,
+  aboveskip=3pt,
+  belowskip=3pt,
+  columns=flexible,
+  keepspaces=true,
+  commentstyle=\itshape\color{codecomment},
+  keywordstyle=\bfseries\color{wegblue},
+  stringstyle=\color{codestring},
+  literate=
+    {á}{{\'a}}1 {à}{{\`a}}1 {â}{{\^a}}1 {ã}{{\~a}}1
+    {é}{{\'e}}1 {ê}{{\^e}}1 {í}{{\'i}}1
+    {ó}{{\'o}}1 {ô}{{\^o}}1 {õ}{{\~o}}1 {ú}{{\'u}}1
+    {ç}{{\c{c}}}1
+    {Á}{{\'A}}1 {À}{{\`A}}1 {Â}{{\^A}}1 {Ã}{{\~A}}1
+    {É}{{\'E}}1 {Ê}{{\^E}}1 {Í}{{\'I}}1
+    {Ó}{{\'O}}1 {Ô}{{\^O}}1 {Õ}{{\~O}}1 {Ú}{{\'U}}1
+    {Ç}{{\c{C}}}1
+    {º}{{\textordmasculine}}1 {ª}{{\textordfeminine}}1
+    {°}{{\textdegree}}1 {–}{{--}}1 {—}{{---}}1
+}
+
+% Linguagem IEC 61131-3 Structured Text (ST)
+\lstdefinelanguage{IECST}{
+  morekeywords={
+    PROGRAM, END_PROGRAM, VAR, VAR_INPUT, VAR_OUTPUT, END_VAR,
+    IF, THEN, ELSIF, ELSE, END_IF, CASE, OF, END_CASE,
+    FOR, TO, DO, END_FOR, WHILE, END_WHILE,
+    AND, OR, NOT, XOR, MOD, TRUE, FALSE,
+    BOOL, INT, UINT, DINT, WORD, DWORD, REAL, TIME, TON, R_TRIG,
+    SEL, SHL, BOOL_TO_WORD, UINT_TO_TIME
+  },
+  sensitive=false,
+  morecomment=[l]{//},
+  morecomment=[s]{(*}{*)},
+  morestring=[b]'
+}
+
+% Linguagem JavaScript (nó function do Node-RED)
+\lstdefinelanguage{JavaScript}{
+  morekeywords={
+    const, let, var, function, return, if, else, for, of, in,
+    new, try, catch, throw, true, false, null, undefined, Math, Date, Object, Array,
+    msg, flow, global, node, context
+  },
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]'
+}
+
+% Linguagem JSON / JSON Schema
+\lstdefinelanguage{JSON}{
+  morekeywords={true, false, null},
+  sensitive=true,
+  morestring=[b]"
+}
+
+% Linguagem SQL (PostgreSQL DDL)
+\lstdefinelanguage{PGSQL}{
+  morekeywords={
+    CREATE, TABLE, INDEX, ON, IF, NOT, EXISTS, PRIMARY, KEY, REFERENCES,
+    BIGSERIAL, BIGINT, INTEGER, SMALLINT, BOOLEAN, DOUBLE, PRECISION,
+    TEXT, VARCHAR, TIMESTAMPTZ, JSONB, DEFAULT, NOW, CHECK, IN, NULL, DESC
+  },
+  sensitive=false,
+  morecomment=[l]{--},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]'
+}
+
+% --- Ambiente float 'quadro' nativo do memoir/abntex2 ---
+\newcommand{\quadroname}{Quadro}
+\newcommand{\listofquadrosname}{Lista de quadros}
+\newfloat[chapter]{quadro}{loq}{\quadroname}
+\newlistof{listofquadros}{loq}{\listofquadrosname}
+\newlistentry{quadro}{loq}{0}
+\setfloatadjustment{quadro}{\centering}
+\counterwithout{quadro}{chapter}
+\renewcommand{\cftquadroname}{\quadroname\space}
+\renewcommand*{\cftquadroaftersnum}{\hfill--\hfill}
+\setfloatlocations{quadro}{htbp}
+
+% Numeração contínua para figuras e tabelas conforme prática ABNT NBR 10719
+\counterwithout{figure}{chapter}
+\counterwithout{table}{chapter}
+
+% --- Espaçamento e parágrafos conforme ABNT ---
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0.2cm}
+\setlength{\emergencystretch}{1.5em}
+
+% --- Configuração de cores para links do PDF (sóbrio para impressão/leitura) ---
+\makeatletter
+\hypersetup{
+  pdftitle={\@title},
+  pdfauthor={\@author},
+  pdfsubject={Documento Técnico -- Pipeline de Análise de Dados com WEG PLC500, Modbus TCP/IP e Node-RED},
+  pdfkeywords={WEG PLC500, CODESYS, Modbus TCP/IP, Node-RED, Pipeline de Dados, ESP32, GNSS, NTP, Indústria 4.0},
+  colorlinks=true,
+  linkcolor=slateink,
+  citecolor=wegblue,
+  filecolor=wegblue,
+  urlcolor=wegblue,
+  bookmarksdepth=4
+}
+\makeatother

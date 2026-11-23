@@ -1,0 +1,113 @@
+% ==============================================================================
+% capitulos/02_fundamentacao.tex
+% Capítulo 2 — Fundamentação Teórica e Tecnologias Adotadas
+% ==============================================================================
+
+\chapter{Fundamentação Teórica e Tecnologias Adotadas}
+\label{cap:fundamentacao}
+
+Este capítulo estabelece a base conceitual e tecnológica que sustenta o projeto, abrangendo o controlador industrial adotado, o protocolo de comunicação de rede, a plataforma Node-RED de programação baseada em fluxos, os fundamentos da camada analítica híbrida e os requisitos de separação entre segurança operacional e supervisão inteligente.
+
+\section{Controladores Lógicos Programáveis e o WEG PLC500}
+\label{sec:fund_plc500}
+
+Os Controladores Lógicos Programáveis (CLPs) são sistemas computacionais industriais projetados para operar em ciclos determinísticos de varredura (\textit{scan cycle}), executando sequencialmente a leitura das entradas físicas, o processamento da lógica de controle, a atualização das saídas físicas e as rotinas de diagnóstico e comunicação \cite{georgini_automacao, moraes_castrucci}. A norma internacional \textbf{IEC 61131-3} padroniza a estrutura de software e as linguagens de programação desses equipamentos, contemplando linguagens gráficas --- como \textit{Ladder Diagram} (LD) e \textit{Function Block Diagram} (FBD) --- e linguagens textuais, entre as quais se destaca o \textit{Structured Text} (ST) pela expressividade na construção de máquinas de estados, temporizações, manipulação de registradores e rotinas de intertravamento \cite{iec_61131_3}.
+
+O \textbf{WEG PLC500} é um controlador de médio e alto desempenho baseado no ambiente \textbf{CODESYS V3.5}, projetado para controle de máquinas, automação de processos e conectividade IIoT \cite{weg_plc500_manual, codesys_v35}. Seu hardware dispõe de entradas e saídas digitais nativas suficientes para a implementação integral da bancada didático-industrial, além de suportar expansão modular por cartões da série MOD (compartilhada com as unidades remotas RUW100). A Tabela~\ref{tab:spec_plc500} resume suas especificações técnicas principais.
+
+\begin{table}[htb]
+  \centering
+  \SingleSpacing
+  \caption{Especificações técnicas principais do controlador WEG PLC500 aplicadas ao projeto}
+  \label{tab:spec_plc500}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}p{4.6cm}L@{}}
+    \toprule
+    \textbf{Característica} & \textbf{Especificação Técnica (WEG PLC500)} \\
+    \midrule
+    Arquitetura de processamento & Processador i.MX Dual Core de 1\,GHz associado a coprocessador de 240\,MHz \\
+    Memória embarcada & 1\,GB de memória RAM e 4\,GB de memória Flash não volátil \\
+    Entradas digitais nativas (DI) & 8 entradas digitais PNP (24\,Vcc), sendo 4 entradas rápidas de até 150\,kHz \\
+    Saídas digitais nativas (DO) & 8 saídas digitais PNP (24\,Vcc) para acionamento de cargas discretas \\
+    Interfaces Ethernet & 2 portas RJ45 Gigabit Ethernet independentes (10/100/1000\,Mbps: \texttt{ETH1} e \texttt{ETH2}) \\
+    Expansibilidade local & Até 8 módulos de expansão \textit{Plug and Play} da família MOD (compatíveis com RUW100) \\
+    Ambiente de programação & CODESYS V3.5 (padrão IEC 61131-3: ST, LD, FBD, SFC e CFC) \\
+    Suporte Modbus TCP/IP & Nativo no CODESYS como \textit{Modbus TCP Server} (Slave) e \textit{Modbus TCP Client} (Master) \\
+    \bottomrule
+  \end{tabularx}
+  \fonte{Adaptado de \citeonline{weg_plc500_manual} e \citeonline{weg_plc500_modbus}.}
+\end{table}
+
+Um diferencial arquitetural do WEG PLC500 para projetos de convergência OT/IT é a disponibilidade de duas interfaces Ethernet físicas independentes (\texttt{ETH1} e \texttt{ETH2}), permitindo segregar a rede de engenharia CODESYS da sub-rede dedicada à comunicação Modbus TCP/IP com o Node-RED \cite{weg_plc500_modbus, stouffer_nist_ot}.
+
+\section{Protocolo Modbus TCP/IP}
+\label{sec:fund_modbus}
+
+Desenvolvido originalmente para barramentos seriais, o protocolo Modbus tornou-se o padrão aberto mais difundido em automação industrial devido à sua simplicidade e baixa sobrecarga de processamento. Em redes Ethernet, sua implementação segue duas especificações da Modbus Organization: o \textit{Modbus Application Protocol Specification V1.1b3} \cite{modbus_app_v11b3}, referente à camada de aplicação, e o \textit{Modbus Messaging on TCP/IP Implementation Guide V1.0b} \cite{modbus_tcp_v10b}, que define o encapsulamento cliente/servidor sobre conexões TCP na porta padrão \textbf{502}.
+
+No Modbus TCP/IP, a Unidade de Dados de Aplicação (ADU) substitui o endereço serial e o verificador CRC por um cabeçalho \textbf{MBAP} (\textit{Modbus Application Protocol}) de 7 bytes anteposto à Unidade de Dados de Protocolo (PDU):
+\begin{itemize}
+  \item \textbf{Transaction Identifier (2 bytes):} identifica e pareia requisições e respostas sobre o mesmo \textit{socket} TCP;
+  \item \textbf{Protocol Identifier (2 bytes):} preenchido com \texttt{0x0000} para transações Modbus padrão;
+  \item \textbf{Length (2 bytes):} informa o número de bytes subsequentes do pacote (\textit{Unit Identifier} somado à PDU);
+  \item \textbf{Unit Identifier (1 byte):} identifica o dispositivo lógico de destino (configurado como \texttt{1} para acesso direto ao CLP).
+\end{itemize}
+
+A memória exposta pelo servidor Modbus divide-se em quatro tabelas primárias acessadas por Códigos de Função (\textit{Function Codes} -- FC), conforme sistematizado na Tabela~\ref{tab:modbus_modelo}. Requisições inválidas recebem como resposta um quadro de exceção com o código de função somado a \texttt{0x80} e o respectivo código diagnóstico de erro \cite{modbus_app_v11b3}.
+
+\begin{table}[htb]
+  \centering
+  \SingleSpacing
+  \caption{Modelo de dados primário e códigos de função Modbus TCP/IP adotados no projeto}
+  \label{tab:modbus_modelo}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}p{2.9cm}p{1.6cm}p{1.7cm}p{2.3cm}L@{}}
+    \toprule
+    \textbf{Tabela Modbus} & \textbf{Tipo} & \textbf{Acesso} & \textbf{Códigos (FC)} & \textbf{Papel na Arquitetura} \\
+    \midrule
+    \textit{Discrete Inputs} & 1 bit & Leitura & \texttt{FC02} & Estados filtrados das botoeiras (\texttt{DI0}--\texttt{DI3}) e flags de segurança do PLC500 \\
+    \textit{Coils} & 1 bit & Leitura / Escrita & \texttt{FC01}, \texttt{FC05}, \texttt{FC15} & Comandos supervisórios do Node-RED para atuação nos LEDs e \textit{reset} de falha \\
+    \textit{Input Registers} & 16 bits & Leitura & \texttt{FC04} & Contadores acumulados de acionamentos, estado da máquina do CLP e telemetria real \\
+    \textit{Holding Registers} & 16 bits & Leitura / Escrita & \texttt{FC03}, \texttt{FC06}, \texttt{FC16} & \textit{Heartbeat} do Node-RED, \textit{timeout} do \textit{watchdog} e severidade classificada pela IA \\
+    \bottomrule
+  \end{tabularx}
+  \fonte{Adaptado de \citeonline{modbus_app_v11b3} e \citeonline{modbus_tcp_v10b}.}
+\end{table}
+
+\section{Programação Baseada em Fluxos com Node-RED e Integração Modbus}
+\label{sec:fund_nodered}
+
+O \textbf{Node-RED}, mantido pela OpenJS Foundation, é um ambiente de programação visual orientado a eventos construído sobre o motor assíncrono do Node.js, amplamente adotado em gateways IIoT e sistemas supervisórios leves \cite{nodered_docs}. Dentro de um fluxo (\textit{flow}), o processamento ocorre pela passagem de objetos JavaScript estruturados (mensagens \texttt{msg}, cujo conteúdo principal reside em \texttt{msg.payload}) através de nós especializados, contando ainda com áreas de memória persistente em escopo de nó (\texttt{context}), de aba (\texttt{flow}) ou global (\texttt{global}).
+
+A integração nativa do Node-RED com redes industriais Modbus TCP/IP e Serial é realizada pelo pacote \textbf{\texttt{node-red-contrib-modbus}}, desenvolvido e mantido por Klaus Landsdorf \cite{nodered_contrib_modbus}. Esse pacote fornece um nó de configuração compartilhado (\texttt{Modbus-Client}) --- responsável por manter a conexão TCP persistente na porta~502, gerenciar reconexões automáticas e enfileirar transações sequencialmente --- acompanhado de nós operacionais dedicados:
+\begin{itemize}
+  \item \textbf{\texttt{Modbus-Read} e \texttt{Modbus-Flex-Getter}:} executam leituras cíclicas ou disparadas por mensagem (\texttt{FC01} a \texttt{FC04}), entregando na saída tanto o vetor de valores decodificados em \texttt{msg.payload} quanto o buffer bruto em \texttt{msg.responseBuffer};
+  \item \textbf{\texttt{Modbus-Write} e \texttt{Modbus-Flex-Write}:} permitem escrever bits individuais ou múltiplos (\texttt{FC05}, \texttt{FC15}) e registradores de 16~bits (\texttt{FC06}, \texttt{FC16}) dinamicamente a partir dos parâmetros montados por um nó \texttt{function} anterior (\texttt{msg.payload.value}, \texttt{msg.payload.fc}, \texttt{msg.payload.address} e \texttt{msg.payload.quantity}).
+\end{itemize}
+
+Associado a nós \texttt{function} (JavaScript), conectores para banco de dados PostgreSQL (\texttt{node-red-contrib-postgresql}) e nós \texttt{http request} para consumo de APIs de modelos de linguagem, o Node-RED reúne em uma única ferramenta determinismo de coleta e flexibilidade analítica \cite{nodered_docs, postgresql_docs}.
+
+\section{Análise Híbrida de Dados: Estatística Temporal e Agentes LLM}
+\label{sec:fund_ia}
+
+A detecção de anomalias em processos industriais discretos requer identificar desvios em relação ao padrão operacional esperado, como repiques ou oscilações anômalas de sensores (\textit{chattering}), ativação prolongada de chaves de nível ou ocorrências térmicas críticas \cite{chandola_2009}. Submeter amostras brutas coletadas a cada $500\,\text{ms}$ diretamente a um LLM resultaria em latência elevada, alto custo por requisição e baixa reprodutibilidade matemática.
+
+Para contornar essa limitação, projeta-se uma \textbf{arquitetura analítica híbrida} dividida em dois estágios no Node-RED:
+\begin{enumerate}
+  \item \textbf{Estágio estatístico determinístico (nó \texttt{function}):} executado sobre janelas temporais deslizantes de duração $W$, calcula métricas formais --- taxa de acionamento $\lambda_i(W)$, fração de tempo ativo (\textit{duty cycle}) $D_i(W)$ e escore padronizado \textit{Z-score} $z_i(W)$ --- utilizando a linha de base histórica armazenada no PostgreSQL e em memória de contexto (\texttt{flow}).
+  \item \textbf{Estágio cognitivo baseado em agente LLM (nó \texttt{http request} + validador JSON):} acionado seletivamente apenas quando o estágio estatístico detecta anomalia, mudança de estado ou fechamento de turno. O agente analisa o vetor de métricas da janela e o histórico recente, gerando diagnóstico em linguagem natural, hipótese de causa provável, recomendação de comando para os LEDs e relatório técnico automático.
+\end{enumerate}
+
+Toda resposta proveniente do modelo passa obrigatoriamente por um nó de validação de \textbf{\textit{JSON Schema}} no Node-RED antes de alcançar o nó \texttt{Modbus-Flex-Write}; qualquer violação estrutural ou \textit{timeout} descarta a saída cognitiva e aplica imediatamente o comando determinístico de \textit{fallback}.
+
+\section{Segurança Funcional e Separação de Responsabilidades OT/IT}
+\label{sec:fund_seguranca}
+
+Em conformidade com as boas práticas de segurança de sistemas de controle industrial estabelecidas no guia NIST SP 800-82 Rev.\,3 \cite{stouffer_nist_ot} e na norma IEC 62443 \cite{iec_62443}, a proteção física de equipamentos e operadores jamais deve depender exclusivamente de fluxos executados na camada IT ou de enlaces Modbus TCP/IP sem autenticação criptográfica nativa.
+
+Assim, a arquitetura fundamenta-se em três barreiras de defesa em profundidade:
+\begin{itemize}
+  \item \textbf{Precedência local absoluta no WEG PLC500:} eventos críticos de campo --- abertura do contato normalmente fechado (NF) da botoeira de parada de emergência ou ativação do sensor de sobretemperatura --- forçam imediatamente o estado seguro nas saídas físicas do CLP, vetando qualquer comando divergente enviado pelo Node-RED.
+  \item \textbf{Supervisão contínua de enlace por \textit{Watchdog} de \textit{Heartbeat}:} o fluxo do Node-RED incrementa ciclicamente um registrador de pulso de vida no PLC500; se o valor deixar de ser atualizado por intervalo superior a $T_{wd}$, o CLP assume perda de comunicação, desliga o atuador principal e aciona sinalização local de falha.
+  \item \textbf{Segmentação de rede por interfaces físicas distintas:} a comunicação Modbus TCP/IP opera isolada na interface \texttt{ETH2} do PLC500, com regras de firewall restringindo conexões na porta TCP~502 exclusivamente ao endereço IP do servidor Node-RED \cite{stouffer_nist_ot}.
+\end{itemize}

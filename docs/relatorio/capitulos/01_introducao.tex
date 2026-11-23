@@ -1,0 +1,85 @@
+% ==============================================================================
+% capitulos/01_introducao.tex
+% Capítulo 1 — Introdução
+% ==============================================================================
+
+\chapter{Introdução}
+\label{cap:introducao}
+
+\section{Contextualização}
+\label{sec:contextualizacao}
+
+A transformação digital dos ambientes fabris, impulsionada pelo paradigma da Indústria 4.0, pela Internet das Coisas (IoT) e pela sua vertente industrial (IIoT), tem aproximado de forma crescente os sistemas de Tecnologia de Operação (OT) das plataformas de Tecnologia da Informação (IT). Historicamente, Controladores Lógicos Programáveis (CLPs) operavam confinados em redes de campo isoladas, dedicados exclusivamente ao controle sequencial, ao intertravamento de máquinas e à supervisão local \cite{moraes_castrucci}. Nas arquiteturas conectadas modernas, entretanto, espera-se que esses controladores atuem como nós inteligentes de borda (\textit{edge devices}), expondo variáveis operacionais em tempo quase real para pipelines analíticas capazes de identificar anomalias, sintetizar diagnósticos contextualizados e retroalimentar ações supervisórias ao processo \cite{chandola_2009, stouffer_nist_ot}.
+
+Controladores de nova geração como o \textbf{WEG PLC500} --- programável em ambiente CODESYS conforme a norma IEC 61131-3 e equipado com duas interfaces Gigabit Ethernet independentes com suporte nativo ao protocolo Modbus TCP/IP --- oferecem uma ponte robusta entre o chão de fábrica e serviços de software modernos \cite{weg_plc500_manual, iec_61131_3}. Paralelamente, ferramentas de programação visual orientadas a fluxos de eventos (\textit{flow-based programming}), com destaque para o \textbf{Node-RED}, consolidaram-se em soluções de IoT e automação pela facilidade de integração com protocolos industriais por meio do pacote \texttt{node-red-contrib-modbus}, conectividade com bancos de dados relacionais e capacidade de orquestrar serviços analíticos e modelos de Inteligência Artificial (IA) \cite{nodered_docs, nodered_contrib_modbus}.
+
+\section{Histórico do Projeto, Redefinição de Escopo e Enquadramento na Situação de Aprendizagem}
+\label{sec:historico_ntp}
+
+Este projeto desenvolve-se no âmbito de uma \textbf{Situação de Aprendizagem (SA) de Internet das Coisas (IoT) de escopo livre}, cuja diretriz pedagógica permite a proposição de arquiteturas e problemas reais de engenharia desde que submetidos à \textbf{aprovação prévia do professor} responsável. Esse formato metodológico visa estimular a autonomia projetual, a capacidade de diagnóstico de viabilidade técnica e a integração ponta a ponta entre hardware, protocolo de comunicação em rede, processamento de dados e atuação.
+
+Dentro dessa modalidade de escopo livre, a proposta inicial submetida ao docente tinha um tema distinto no domínio de redes e sistemas embarcados conectados: o desenvolvimento de um \textbf{servidor de tempo \textit{Network Time Protocol} (NTP) Stratum~1 utilizando uma antena de recepção \textit{Global Navigation Satellite System} (GNSS) acoplada a um microcontrolador ESP32} \cite{rfc5905_ntp, espressif_esp32}. Na concepção original, o receptor GNSS forneceria ao ESP32 tanto as sentenças de navegação no padrão NMEA (via interface serial UART) quanto o pulso elétrico de sincronismo de alta precisão \textit{Pulse Per Second} (PPS) por interrupção de hardware, permitindo ao microcontrolador disciplinar seu relógio local e atender requisições NTPv4 na rede local.
+
+Durante a fase inicial de avaliação experimental e prototipação em laboratório, contudo, identificaram-se restrições práticas severas que inviabilizaram a continuidade e a validação confiável do servidor NTP em ambiente acadêmico:
+\begin{enumerate}
+  \item \textbf{Inviabilidade de recepção de sinal GNSS em ambiente interno (\textit{indoor}):} os sinais de radiofrequência transmitidos pelas constelações GNSS na banda~L chegam à superfície terrestre com potência extremamente baixa (tipicamente inferior a $-125\,\text{dBm}$). No interior do laboratório, a atenuação provocada pelas lajes de concreto armado e pela estrutura metálica da edificação impedia a aquisição de efemérides e o travamento (\textit{3D fix}) de satélites suficientes para habilitar o sinal PPS, enquanto medições próximas a janelas sofriam forte degradação por multicaminho (\textit{multipath}).
+  \item \textbf{Limitações de infraestrutura física e de hardware:} a instalação permanente de uma antena GNSS ativa externa no telhado do prédio, interligada ao laboratório por cabo coaxial de baixa perda com proteção contra surtos, mostrou-se impraticável dentro das restrições físicas e logísticas do ambiente, somando-se a dificuldades de disponibilidade e estabilidade dos módulos periféricos do protótipo com ESP32.
+\end{enumerate}
+
+Diante desse diagnóstico técnico, realizou-se uma \textbf{pivotagem completa de tema}, redirecionando o projeto para um sistema de Internet Industrial das Coisas (IIoT) e análise de dados integralmente reproduzível e validável em bancada \textit{indoor}, sem dependência de visada externa para satélites. Em estrita observância às regras da Situação de Aprendizagem de IoT de escopo livre, o novo escopo --- fundamentado no controlador industrial \textbf{WEG PLC500} integrado via \textbf{Modbus TCP/IP} à plataforma \textbf{Node-RED}, com botoeiras simulando sensores de campo e indicadores LED simulando atuadores --- foi formalmente apresentado e contou com a \textbf{aprovação prévia do professor}, o que \textbf{garante plena conformidade do projeto com o estabelecido} para a avaliação da disciplina. Ademais, um princípio técnico relevante da proposta original foi preservado na nova arquitetura: o rigor com a consistência temporal das amostras (\textit{timestamping}) e com a avaliação analítica de eventos em janelas de tempo bem definidas.
+
+\section{Definição do Problema e Motivação}
+\label{sec:problema}
+
+Na arquitetura adotada após a redefinição de escopo, a integração entre uma pipeline analítica com recursos de IA no Node-RED e um CLP industrial impõe dois desafios centrais de engenharia:
+
+\begin{enumerate}
+  \item \textbf{Fidelidade de simulação segura em bancada:} antes do acoplamento a motores de potência, válvulas pressurizadas ou processos térmicos reais, é indispensável dispor de uma bancada didático-industrial controlada que represente os sinais discretos de campo por meio de botoeiras e LEDs em 24\,Vcc, permitindo exercitar trepidação mecânica de contatos, condição de nível crítico, sobretemperatura, parada de emergência e desconexão de rede sem risco físico.
+  \item \textbf{Convivência entre análise inteligente não determinística e segurança determinística:} fluxos executados na camada IT --- incluindo \textit{polling} sobre TCP/IP, consultas a banco de dados e chamadas a Modelos de Linguagem Grandes (LLMs) --- apresentam latência variável e comportamento probabilístico. Por conseguinte, toda decisão analítica deve ser validada por contratos de dados estritos (\textit{JSON Schema}) e permanecer subordinada a uma camada determinística de intertravamento \textit{fail-safe} executada localmente no WEG PLC500 \cite{stouffer_nist_ot}.
+\end{enumerate}
+
+A motivação deste trabalho reside em documentar uma solução de engenharia completa que enderece ambos os problemas, combinando a confiabilidade determinística do WEG PLC500, a padronização do protocolo Modbus TCP/IP e a capacidade de orquestração e análise híbrida do Node-RED.
+
+\section{Objetivos}
+\label{sec:objetivos}
+
+\subsection{Objetivo Geral}
+Especificar a arquitetura técnica, os contratos de comunicação, a implementação lógica e o plano formal de validação de uma pipeline híbrida de análise de dados de sensores simulados por botoeiras em um controlador WEG PLC500, integrada via Modbus TCP/IP à plataforma Node-RED para diagnóstico assistido por IA e comando supervisionado de atuadores simulados por LEDs.
+
+\subsection{Objetivos Específicos}
+\begin{itemize}
+  \item Definir um cenário didático-industrial estruturado sobre as entradas e saídas digitais nativas de 24\,Vcc PNP do WEG PLC500 (quatro botoeiras simulando sensores de processo e quatro LEDs simulando atuadores e sinalizadores), contemplando lógica normalmente fechada (NF) para parada de emergência.
+  \item Especificar a topologia de rede OT/IT segmentada e o mapa completo de registradores Modbus TCP/IP (\textit{Discrete Inputs}, \textit{Coils}, \textit{Input Registers} e \textit{Holding Registers}), incluindo mecanismo de \textit{heartbeat} e \textit{watchdog} de comunicação.
+  \item Documentar a implementação da lógica determinística no WEG PLC500 em \textit{Structured Text} (IEC 61131-3) no CODESYS V3.5, abrangendo filtragem de \textit{debounce}, contadores de eventos, máquina de estados e intertravamento local com precedência absoluta sobre comandos remotos.
+  \item Projetar a pipeline analítica híbrida na plataforma Node-RED com o pacote \texttt{node-red-contrib-modbus}, combinando persistência em PostgreSQL, análise estatística determinística em janelas deslizantes em nós \texttt{function}, diagnóstico contextual via agente LLM com validação por \textit{JSON Schema} e emissão automática de relatórios operacionais.
+  \item Estabelecer um plano formal de validação composto por casos de teste funcionais, analíticos e de falha, critérios quantitativos de aceitação e matriz de análise de riscos técnicos.
+\end{itemize}
+
+\section{Escopo, Delimitações e Conformidade com a Situação de Aprendizagem}
+\label{sec:escopo}
+
+Por tratar-se de uma \textbf{Situação de Aprendizagem de IoT de escopo livre com aprovação prévia do professor}, a conformidade do projeto com o estabelecido é assegurada simultaneamente no plano formal (validação docente prévia da redefinição de escopo após os ensaios preliminares de bancada) e no plano técnico-pedagógico, uma vez que a solução contempla de ponta a ponta todas as camadas estruturantes de um ecossistema IoT/IIoT:
+\begin{itemize}
+  \item \textbf{Sensoriamento, atuação física e controle de borda (\textit{Edge/OT}):} aquisição digital em 24\,Vcc PNP com filtragem de \textit{debounce}, contagem de eventos, máquina de estados e intertravamento local \textit{fail-safe} no WEG PLC500;
+  \item \textbf{Conectividade e interoperabilidade em rede:} comunicação cliente/servidor sobre Ethernet segmentada (\texttt{ETH2}) utilizando protocolo aberto Modbus TCP/IP na porta~502 com supervisão contínua de enlace (\textit{heartbeat}/\textit{watchdog});
+  \item \textbf{Orquestração, persistência e processamento analítico (\textit{IT/IoT Platform}):} fluxos orientados a eventos no Node-RED (\texttt{node-red-contrib-modbus}), armazenamento histórico e forense em PostgreSQL, detecção estatística de anomalias em janelas deslizantes e diagnóstico assistido por IA governado por \textit{JSON Schema};
+  \item \textbf{Retroalimentação em malha fechada e observabilidade:} comando supervisionado dos atuadores (LEDs) com auditoria da máscara real das saídas físicas (\texttt{wMascara\_DO\_Real}) e despacho automático de relatórios operacionais.
+\end{itemize}
+
+Este documento concentra-se estritamente na \textbf{arquitetura, especificação técnica, implementação de referência e plano de validação}. Não fazem parte do escopo desta etapa a execução da campanha de medições em laboratório nem a apresentação de resultados experimentais coletados; todos os limiares, temporizações e parâmetros descritos constituem especificações de projeto e critérios objetivos de aceitação a serem verificados durante o comissionamento da bancada.
+
+A camada física de campo restringe-se a sinais discretos (entradas e saídas digitais nativas em 24\,Vcc PNP), sem utilização de módulos analógicos neste ciclo, mantendo todavia a arquitetura pronta para expansão futura com cartões da família MOD/RUW100 do WEG PLC500 \cite{weg_plc500_manual}.
+
+\section{Organização do Documento}
+\label{sec:organizacao}
+
+O restante do documento estrutura-se em seis capítulos e um apêndice:
+\begin{itemize}
+  \item O \textbf{Capítulo~\ref{cap:fundamentacao}} aborda a fundamentação técnica sobre o WEG PLC500, a norma IEC 61131-3, o protocolo Modbus TCP/IP, a plataforma Node-RED com \texttt{node-red-contrib-modbus}, a análise híbrida de anomalias e os princípios de segurança OT/IT.
+  \item O \textbf{Capítulo~\ref{cap:arquitetura}} detalha a arquitetura em camadas, a topologia de rede, o mapeamento elétrico e lógico das botoeiras e LEDs, o mapa de registradores Modbus TCP/IP e o diagrama de sequência da comunicação.
+  \item O \textbf{Capítulo~\ref{cap:implementacao_clp}} especifica a configuração no CODESYS V3.5, a máquina de estados finitos e o código completo em \textit{Structured Text} embarcado no WEG PLC500.
+  \item O \textbf{Capítulo~\ref{cap:implementacao_nodered}} descreve o fluxo de orquestração no Node-RED, a formulação matemática da análise estatística em janelas temporais, o código do nó \texttt{function}, a governança do agente LLM com \textit{JSON Schema} e o esquema relacional no PostgreSQL.
+  \item O \textbf{Capítulo~\ref{cap:plano_validacao}} estabelece o protocolo de validação em bancada com dez casos de teste, critérios quantitativos de aceitação e análise de riscos técnicos.
+  \item O \textbf{Capítulo~\ref{cap:consideracoes}} sintetiza as conclusões de engenharia e apresenta o roteiro de trabalhos futuros.
+  \item O \textbf{Apêndice~\ref{ap:checklist}} disponibiliza um \textit{checklist} prático de comissionamento e implantação da bancada.
+\end{itemize}

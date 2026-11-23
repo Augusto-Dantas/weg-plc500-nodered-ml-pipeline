@@ -1,0 +1,103 @@
+% ==============================================================================
+% main.tex
+% Documento raiz — Relatório Técnico-Científico conforme ABNT NBR 10719:2015
+% Classe: abntex2 | Compilador: pdflatex + bibtex (Overleaf / TeX Live)
+% ==============================================================================
+
+\documentclass[
+  12pt,
+  oneside,
+  a4paper,
+  english,
+  brazil
+]{abntex2}
+
+% --- Pacotes, estilos TikZ, listings e ambiente Quadro ---
+\input{config/pacotes}
+
+% --- Metadados institucionais centralizados ---
+\input{config/metadados}
+
+% --- Customização da capa e folha de rosto (ABNT NBR 10719:2015) ---
+\input{pretextual/folha_rosto_capa}
+
+% ==============================================================================
+\begin{document}
+
+% Seleciona idioma português do Brasil como principal
+\selectlanguage{brazil}
+
+% Retira espaço extra obsoleto entre frases
+\frenchspacing
+
+% ------------------------------------------------------------------------------
+% ELEMENTOS PRÉ-TEXTUAIS (ABNT NBR 10719:2015)
+% ------------------------------------------------------------------------------
+\pretextual
+
+% Capa
+\imprimircapa
+
+% Folha de rosto (sem ficha catalográfica no verso em modo oneside)
+\imprimirfolhaderosto*
+
+% Resumo em língua vernácula (ABNT NBR 6028:2021)
+\input{pretextual/resumo}
+
+% Abstract em língua estrangeira
+\input{pretextual/abstract}
+
+% Lista de ilustrações
+\pdfbookmark[0]{\listfigurename}{lof}
+\listoffigures*
+\cleardoublepage
+
+% Lista de tabelas
+\pdfbookmark[0]{\listtablename}{lot}
+\listoftables*
+\cleardoublepage
+
+% Lista de quadros (códigos, matrizes e casos de teste)
+\pdfbookmark[0]{\listofquadrosname}{loq}
+\listofquadros*
+\cleardoublepage
+
+% Lista de abreviaturas e siglas
+\input{pretextual/siglas}
+
+% Lista de símbolos
+\input{pretextual/simbolos}
+
+% Sumário (ABNT NBR 6027:2012)
+\pdfbookmark[0]{\contentsname}{toc}
+\tableofcontents*
+\cleardoublepage
+
+% ------------------------------------------------------------------------------
+% ELEMENTOS TEXTUAIS
+% ------------------------------------------------------------------------------
+\textual
+
+\include{capitulos/01_introducao}
+\include{capitulos/02_fundamentacao}
+\include{capitulos/03_arquitetura}
+\include{capitulos/04_implementacao_clp}
+\include{capitulos/05_implementacao_nodered}
+\include{capitulos/06_plano_validacao}
+\include{capitulos/07_consideracoes_finais}
+
+% ------------------------------------------------------------------------------
+% ELEMENTOS PÓS-TEXTUAIS
+% ------------------------------------------------------------------------------
+\postextual
+
+% Referências bibliográficas (ABNT NBR 6023:2018 via abntex2-alf)
+\bibliography{referencias}
+
+% Apêndices
+\begin{apendicesenv}
+  \partapendices
+  \include{apendices/apendice_a_checklist}
+\end{apendicesenv}
+
+\end{document}
