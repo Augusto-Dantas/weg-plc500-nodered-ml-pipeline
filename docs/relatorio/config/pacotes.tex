@@ -7,11 +7,12 @@
 % --- Codificação e fontes ---
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{lmodern}
+\usepackage{newtxtext,newtxmath} % Família Times, uniforme em todo o documento
 \usepackage{indentfirst}
 \usepackage{microtype}
 \usepackage{xcolor}
 \usepackage{graphicx}
+\usepackage{etoolbox}
 
 % --- Matemática e símbolos ---
 \usepackage{amsmath}
@@ -60,9 +61,9 @@
 
 \lstset{
   basicstyle=\linespread{0.92}\selectfont\ttfamily\scriptsize\color{black},
-  backgroundcolor=\color{codebg},
+  backgroundcolor=\color{white},
   frame=single,
-  rulecolor=\color{codeborder},
+  rulecolor=\color{black},
   numbers=left,
   numberstyle=\tiny\color{black},
   numbersep=7pt,
@@ -160,6 +161,11 @@
 \counterwithout{table}{chapter}
 
 % --- Padronização tipográfica do texto acadêmico ---
+% Corpo em Times, tamanho 12 (definido na classe); cor preta.
+% Tabelas e quadros usam corpo menor e espaçamento simples, de forma uniforme.
+\AtBeginEnvironment{table}{\small\SingleSpacing}
+\AtBeginEnvironment{quadro}{\small\SingleSpacing}
+\renewcommand{\arraystretch}{1.15}
 % O texto corrido permanece sem negrito; títulos estruturais são formatados
 % pela classe abntex2 e mantêm a hierarquia visual prevista pelo modelo.
 \renewcommand{\textbf}[1]{#1}
