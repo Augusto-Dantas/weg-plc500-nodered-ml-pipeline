@@ -1,0 +1,7 @@
+{
+  "cfg-pg-plc500": {
+    "user": "CHANGE_ME_POSTGRES_USER",
+    "password": "CHANGE_ME_POSTGRES_PASSWORD"
+  },
+  "note": "Copy to flows_cred.json only if overriding env TypedInputs; never commit flows_cred.json."
+}

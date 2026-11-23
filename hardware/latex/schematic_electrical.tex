@@ -1,0 +1,310 @@
+\documentclass[border=8pt]{standalone}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{siunitx}
+\sisetup{output-decimal-marker={,}}
+\usepackage{tikz}
+\usetikzlibrary{
+  arrows.meta,
+  positioning,
+  shapes.geometric,
+  fit,
+  backgrounds,
+  calc,
+  decorations.pathreplacing
+}
+\usepackage[siunitx,RPvoltages,european]{circuitikz}
+
+% Report color palette (docs/relatorio/config/pacotes.tex)
+\definecolor{wegblue}{RGB}{0, 87, 157}
+\definecolor{slateink}{RGB}{38, 50, 56}
+\definecolor{steelbg}{RGB}{244, 247, 250}
+\definecolor{tealnode}{RGB}{0, 121, 107}
+\definecolor{amberwarn}{RGB}{217, 119, 6}
+\definecolor{crimsonalert}{RGB}{185, 28, 28}
+\definecolor{ledgreen}{RGB}{22, 163, 74}
+\definecolor{ledyellow}{RGB}{202, 138, 4}
+\definecolor{ledred}{RGB}{220, 38, 38}
+\definecolor{ledwhite}{RGB}{100, 116, 139}
+\definecolor{wire24v}{RGB}{185, 28, 28}
+\definecolor{wire0v}{RGB}{29, 78, 216}
+\definecolor{wirepe}{RGB}{21, 128, 61}
+
+\begin{document}
+\begin{circuitikz}[
+  font=\sffamily\footnotesize,
+  >=Stealth,
+  term/.style={circle, draw=slateink, fill=white, inner sep=1.4pt, line width=0.7pt},
+  zonebox/.style={rectangle, rounded corners=4pt, draw=slateink!45, dashed, fill=steelbg, line width=0.8pt},
+  safetybox/.style={rectangle, rounded corners=3pt, draw=crimsonalert, dashed, fill=crimsonalert!5, line width=0.9pt},
+  plcbox/.style={rectangle, rounded corners=4pt, draw=wegblue, fill=wegblue!6, line width=1.4pt},
+  psubox/.style={rectangle, rounded corners=3pt, draw=slateink, fill=white, line width=1.0pt},
+  lbl/.style={font=\sffamily\scriptsize, text=slateink},
+  pinlbl/.style={font=\sffamily\scriptsize\ttfamily, text=slateink}
+]
+
+% =========================================================================
+% OUTER FRAME & TITLE HEADER
+% =========================================================================
+\draw[draw=slateink!35, line width=0.8pt, rounded corners=4pt] (-0.4, -0.2) rectangle (34.4, 20.1);
+
+\node[anchor=west, font=\sffamily\large\bfseries, text=wegblue] at (0.2, 19.45)
+  {WEG PLC500 --- Esquema Elétrico de Campo (24 Vcc PNP) e Proteção};
+\node[anchor=west, font=\sffamily\footnotesize, text=slateink!85] at (0.2, 18.85)
+  {Projeto: \texttt{weg-plc500-nodered-ml-pipeline} \;|\; Referência: \texttt{RT-AUT-2026-001} \;|\; Ciclo \texttt{MainTask}: \qty{10}{\milli\second} \;|\; I/O Nativo PNP 24~Vcc};
+
+% Legend Box (Top-Right)
+\node[draw=slateink!40, fill=steelbg, rounded corners=3pt, anchor=east, inner sep=5pt, font=\sffamily\scriptsize] at (33.9, 19.15) {%
+  \begin{tabular}{@{}l@{\;\;}l@{\quad}l@{\;\;}l@{}}
+    \textcolor{wire24v}{\rule[2pt]{12pt}{1.5pt}} & \texttt{+24 Vcc} (Sourcing) &
+    \textcolor{slateink}{\rule[2pt]{12pt}{1.2pt}} & Sinais \texttt{DI0..DI2} / \texttt{DO0..DO3} \\
+    \textcolor{wire0v}{\rule[2pt]{12pt}{1.5pt}} & \texttt{0 Vcc} (COM / Retorno) &
+    \textcolor{crimsonalert}{\rule[2pt]{12pt}{1.5pt}} & Segurança \texttt{DI3} (\texttt{NF} Fail-Safe, \qty{0}{\milli\second}) \\
+    \textcolor{wirepe}{\rule[2pt]{12pt}{1.2pt}} & \texttt{PE} (Terra de Proteção) &
+    \tikz[baseline=-0.5ex]\node[term]{}; & Borne em Trilho DIN (\texttt{TB\_*})
+  \end{tabular}%
+};
+
+% =========================================================================
+% BACKGROUND ZONE CONTAINERS
+% =========================================================================
+\begin{scope}[on background layer]
+  % Zone A: Power Supply & Protection
+  \node[zonebox, fit={(0.0, 14.3) (14.1, 18.1)}] (zoneA) {};
+  \node[anchor=north west, font=\sffamily\scriptsize\bfseries, text=wegblue] at (0.2, 18.0)
+    {ZONA A: ALIMENTAÇÃO AC/DC E PROTEÇÃO (\texttt{Q1}, \texttt{PS1}, \texttt{F1})};
+
+  % Zone B: Digital Inputs
+  \node[zonebox, fit={(1.6, 3.0) (14.1, 13.8)}] (zoneB) {};
+  \node[anchor=north west, font=\sffamily\scriptsize\bfseries, text=wegblue] at (1.8, 13.7)
+    {ZONA B: ENTRADAS DIGITAIS 24~Vcc PNP (\texttt{B1..B3} NA / \texttt{B4} NF)};
+
+  % Safety highlight around DI3 branch
+  \node[safetybox, fit={(2.8, 3.35) (13.85, 5.45)}] (safeDI3) {};
+
+  % Zone D: Digital Outputs
+  \node[zonebox, fit={(22.7, 3.0) (33.9, 13.8)}] (zoneD) {};
+  \node[anchor=north west, font=\sffamily\scriptsize\bfseries, text=wegblue] at (22.9, 13.7)
+    {ZONA D: SAÍDAS DIGITAIS 24~Vcc PNP (\texttt{R1..R4} \qty{2.2}{\kilo\ohm} \qty{0.5}{\watt} + LEDs \texttt{L1..L4})};
+\end{scope}
+
+% =========================================================================
+% ZONE A: MAINS -> Q1 (2P MCB 6A) -> PS1 (24Vcc 2.5A) -> F1 (2A)
+% =========================================================================
+% Mains labels (moved inside Zone A cleanly)
+\node[pinlbl, anchor=east] (mainsL) at (2.1, 16.65) {Rede L};
+\node[lbl, anchor=east, text=slateink!80] at (2.1, 16.20) {127/220~Vca};
+\node[pinlbl, anchor=east] (mainsN) at (2.1, 15.75) {Rede N};
+\node[pinlbl, anchor=east, text=wirepe] (mainsPE) at (2.1, 14.90) {PE};
+
+% Q1 2P Circuit Breaker Box
+\draw[psubox] (2.6, 15.25) rectangle (4.9, 17.35);
+\node[font=\sffamily\scriptsize\bfseries, text=slateink] at (3.75, 17.12) {\texttt{Q1}: Disj. 2P};
+\node[font=\sffamily\tiny, text=slateink!80] at (3.75, 15.45) {\qty{6}{\ampere} Curva C};
+
+% Q1 internal breaker contacts (L and N)
+\draw[thick, slateink] (2.1, 16.65) -- (3.0, 16.65);
+\draw[thick, slateink] (3.0, 16.65) -- (4.2, 16.88);
+\draw[thick, slateink] (4.3, 16.65) -- (5.8, 16.65);
+\draw[thick, wire0v] (2.1, 15.75) -- (3.0, 15.75);
+\draw[thick, wire0v] (3.0, 15.75) -- (4.2, 15.98);
+\draw[thick, wire0v] (4.3, 15.75) -- (5.8, 15.75);
+\draw[dashed, slateink!70] (3.6, 16.76) -- (3.6, 15.86);
+\node[term] at (2.6, 16.65) {};
+\node[term] at (4.9, 16.65) {};
+\node[term] at (2.6, 15.75) {};
+\node[term] at (4.9, 15.75) {};
+
+% PE line to PS1 and earth
+\draw[thick, wirepe] (2.1, 14.90) -- (5.8, 14.90);
+\draw[thick, wirepe] (5.25, 14.90) -- (5.25, 14.48) node[ground]{};
+\fill[wirepe] (5.25, 14.90) circle (1.5pt);
+
+% PS1 Regulated PSU Block
+\draw[psubox, draw=wegblue, line width=1.1pt] (5.8, 14.55) rectangle (9.6, 17.35);
+\node[font=\sffamily\footnotesize\bfseries, text=wegblue] at (7.7, 16.95) {\texttt{PS1}: Fonte Regulada};
+\node[font=\sffamily\scriptsize, text=slateink] at (7.7, 16.30) {Entrada: 100--240~Vca};
+\node[font=\sffamily\scriptsize\bfseries, text=tealnode] at (7.7, 15.65) {Saída: 24~Vcc / \qty{2.5}{\ampere}};
+\node[font=\sffamily\tiny, text=slateink!80] at (7.7, 14.95) {Montagem Trilho DIN (\qty{60}{\watt})};
+
+\node[pinlbl, anchor=west] at (5.85, 16.65) {L};
+\node[pinlbl, anchor=west] at (5.85, 15.75) {N};
+\node[pinlbl, anchor=west, text=wirepe] at (5.85, 14.90) {PE};
+\node[pinlbl, anchor=east, text=wire24v] at (9.55, 16.45) {+24V};
+\node[pinlbl, anchor=east, text=wire0v] at (9.55, 15.05) {0V};
+
+% F1 2A Fuse on +24V output
+\draw[very thick, wire24v] (9.6, 16.45) -- (10.5, 16.45);
+\draw[very thick, wire24v] (10.5, 16.45) to[fuse, l=\texttt{F1}: \qty{2}{\ampere}] (12.5, 16.45);
+\draw[very thick, wire24v] (12.5, 16.45) -- (13.4, 16.45) -- (13.4, 12.55);
+\node[term] (tb24top) at (13.4, 12.55) {};
+
+% PS1 0V output routed cleanly along far left (x=0.6) down to bottom 0V bus (y=1.9)
+\draw[very thick, wire0v] (9.6, 15.05) -- (10.1, 15.05) -- (10.1, 14.42) -- (0.6, 14.42) -- (0.6, 1.9) -- (33.1, 1.9);
+\node[lbl, anchor=west, text=wire0v] at (1.5, 1.58) {\textbf{Barramento \texttt{0 Vcc (COM)} --- Cabo Azul \qty{1.5}{\milli\metre\squared}}};
+
+% =========================================================================
+% +24 Vcc TOP DISTRIBUTION BUS (y = 12.55)
+% =========================================================================
+\draw[very thick, wire24v] (2.2, 12.55) -- (14.5, 12.55);
+\fill[wire24v] (13.4, 12.55) circle (1.8pt);
+\node[lbl, anchor=south, text=wire24v] at (7.8, 12.63) {\textbf{Barramento \texttt{+24 Vcc} Protegido (\texttt{TB\_24V}) --- Cabo Vermelho \qty{1.5}{\milli\metre\squared}}};
+
+% =========================================================================
+% ZONE C: WEG PLC500 CENTRAL CONTROLLER BLOCK (x = 14.5 to 22.3)
+% =========================================================================
+\draw[plcbox] (14.5, 2.5) rectangle (22.3, 13.7);
+\node[font=\sffamily\normalsize\bfseries, text=wegblue] at (18.4, 13.15) {WEG PLC500 (\texttt{U1})};
+\node[font=\sffamily\scriptsize, text=slateink!85] at (18.4, 12.65) {i.MX Dual Core \qty{1}{\giga\hertz} | CODESYS V3.5};
+
+% PLC internal functional summary box (narrowed so pin labels never touch it)
+\draw[draw=wegblue!45, fill=white, rounded corners=3pt] (16.45, 5.2) rectangle (20.35, 11.7);
+\node[align=center, font=\sffamily\scriptsize, text=slateink] at (18.4, 8.45) {%
+  \textbf{Lógica Local (\texttt{MainTask} \qty{10}{\milli\second})}\\[4pt]
+  \texttt{DI0..DI2}: Debounce \texttt{TON} \qty{50}{\milli\second}\\
+  \texttt{DI3}: \textbf{Sem debounce} (\qty{0}{\milli\second}, NF)\\[5pt]
+  \textbf{Precedência Intertrav.:}\\
+  1. \texttt{EmergTravada} (\texttt{DI3=0})\\
+  2. \texttt{Sobretemp} (\texttt{DI2=1})\\
+  3. \texttt{Watchdog} (\texttt{ETH2})\\
+  4. \texttt{HabRemoto} (\texttt{Coil[4]})\\[5pt]
+  \texttt{ETH1}: \texttt{192.168.20.10/24}\\
+  \texttt{ETH2}: \texttt{192.168.10.10/24:502}
+};
+
+% PLC Power Pins (Top-Left and Bottom-Left)
+\draw[very thick, wire24v] (14.1, 12.55) -- (14.5, 12.55);
+\node[pinlbl, anchor=west, text=wire24v] at (14.55, 12.55) {+24Vcc};
+\node[term] at (14.1, 12.55) {};
+
+\draw[very thick, wire0v] (14.1, 1.9) -- (14.1, 2.9) -- (14.5, 2.9);
+\fill[wire0v] (14.1, 1.9) circle (1.8pt);
+\node[pinlbl, anchor=west, text=wire0v] at (14.55, 2.9) {0Vcc (COM)};
+
+% PLC Chassis PE
+\draw[thick, wirepe] (18.4, 2.5) -- (18.4, 2.05) node[ground]{};
+\node[pinlbl, anchor=south, text=wirepe] at (18.4, 2.52) {PE};
+
+% PLC Spare I/O Labels (DI4..DI7, DO4..DO7)
+\node[pinlbl, anchor=west, text=slateink!65] at (14.55, 3.5) {DI4..DI7 (Reserva)};
+\node[pinlbl, anchor=east, text=slateink!65] at (22.25, 3.5) {DO4..DO7 (Reserva)};
+
+% =========================================================================
+% ZONE B: DIGITAL INPUTS DI0..DI3 (PNP Sourcing)
+% =========================================================================
+\draw[very thick, wire24v] (2.2, 12.55) -- (2.2, 4.4);
+\fill[wire24v] (2.2, 12.55) circle (1.8pt);
+
+% DI0: B1_SensPresenca (NA)
+\draw[very thick, wire24v] (2.2, 10.7) -- (4.3, 10.7);
+\fill[wire24v] (2.2, 10.7) circle (1.8pt);
+\draw[thick, slateink] (4.3, 10.7) to[push button, l=\texttt{B1\_SensPresenca} (NA)] (6.6, 10.7);
+\draw[thick, slateink] (6.6, 10.7) -- (14.5, 10.7);
+\node[term] (tbdi0) at (11.2, 10.7) {};
+\node[lbl, above=2pt of tbdi0] {\texttt{TB\_DI:0}};
+\node[lbl, anchor=north] at (9.0, 10.6) {\qty{50}{\milli\second} \texttt{TON} \;|\; \qty{0.75}{\milli\metre\squared} Branco};
+\node[pinlbl, anchor=west] at (14.55, 10.7) {DI0 (\%IX0.0)};
+
+% DI1: B2_SensNivelAlto (NA)
+\draw[very thick, wire24v] (2.2, 8.6) -- (4.3, 8.6);
+\fill[wire24v] (2.2, 8.6) circle (1.8pt);
+\draw[thick, slateink] (4.3, 8.6) to[push button, l=\texttt{B2\_SensNivelAlto} (NA)] (6.6, 8.6);
+\draw[thick, slateink] (6.6, 8.6) -- (14.5, 8.6);
+\node[term] (tbdi1) at (11.2, 8.6) {};
+\node[lbl, above=2pt of tbdi1] {\texttt{TB\_DI:1}};
+\node[lbl, anchor=north] at (9.0, 8.5) {\qty{50}{\milli\second} \texttt{TON} \;|\; \qty{0.75}{\milli\metre\squared} Branco};
+\node[pinlbl, anchor=west] at (14.55, 8.6) {DI1 (\%IX0.1)};
+
+% DI2: B3_SensSobretemp (NA)
+\draw[very thick, wire24v] (2.2, 6.5) -- (4.3, 6.5);
+\fill[wire24v] (2.2, 6.5) circle (1.8pt);
+\draw[thick, slateink] (4.3, 6.5) to[push button, l=\texttt{B3\_SensSobretemp} (NA)] (6.6, 6.5);
+\draw[thick, slateink] (6.6, 6.5) -- (14.5, 6.5);
+\node[term] (tbdi2) at (11.2, 6.5) {};
+\node[lbl, above=2pt of tbdi2] {\texttt{TB\_DI:2}};
+\node[lbl, anchor=north] at (9.0, 6.4) {\qty{50}{\milli\second} \texttt{TON} \;|\; \qty{0.75}{\milli\metre\squared} Branco};
+\node[pinlbl, anchor=west] at (14.55, 6.5) {DI2 (\%IX0.2)};
+
+% DI3: B4_Emergencia (NF Fail-Safe Mushroom Switch)
+\draw[very thick, wire24v] (2.2, 4.4) -- (4.3, 4.4);
+\draw[thick, crimsonalert] (4.3, 4.4) -- (4.7, 4.4);
+\draw[thick, crimsonalert] (6.2, 4.4) -- (6.6, 4.4);
+\draw[thick, crimsonalert, fill=white] (4.7, 4.4) circle (1.8pt);
+\draw[thick, crimsonalert, fill=white] (6.2, 4.4) circle (1.8pt);
+\draw[very thick, crimsonalert] (4.65, 4.24) -- (6.25, 4.24);
+\draw[thick, crimsonalert] (5.45, 4.24) -- (5.45, 4.75);
+\draw[thick, crimsonalert, fill=crimsonalert!20] (5.05, 4.75) arc (180:0:0.40 and 0.25) -- cycle;
+\node[font=\sffamily\scriptsize\bfseries, text=crimsonalert, anchor=south] at (5.45, 5.02) {\texttt{B4\_Emergencia} (NF)};
+\draw[very thick, crimsonalert] (6.6, 4.4) -- (14.5, 4.4);
+\node[term, draw=crimsonalert] (tbdi3) at (11.2, 4.4) {};
+\node[lbl, text=crimsonalert, above=2pt of tbdi3] {\texttt{TB\_DI:3}};
+\node[font=\sffamily\scriptsize\bfseries, text=crimsonalert, anchor=north] at (9.0, 4.22)
+  {Fail-Safe \qty{0}{\milli\second} (0~Vcc / fio partido = Bloqueio)};
+\node[pinlbl, anchor=west, text=crimsonalert] at (14.55, 4.4) {DI3 (\%IX0.3)};
+
+% =========================================================================
+% ZONE D: DIGITAL OUTPUTS DO0..DO3 (2.2 kOhm 0.5 W + LEDs -> 0 Vcc)
+% =========================================================================
+\draw[very thick, wire0v] (33.1, 10.7) -- (33.1, 1.9);
+\fill[wire0v] (33.1, 1.9) circle (1.8pt);
+
+% DO0: R1 + L1_AtuMotor (Green)
+\node[pinlbl, anchor=east] at (22.25, 10.7) {DO0 (\%QX0.0)};
+\draw[thick, tealnode] (22.3, 10.7) -- (25.0, 10.7);
+\node[term] (tbdo0) at (23.6, 10.7) {};
+\node[lbl, above=2pt of tbdo0] {\texttt{TB\_DO:0}};
+\draw[thick, slateink] (25.0, 10.7) to[R, l=\texttt{R1}: \qty{2.2}{\kilo\ohm} \qty{0.5}{\watt}] (28.3, 10.7);
+\draw[thick, ledgreen] (28.3, 10.7) to[leDo, l=\texttt{L1\_AtuMotor} (Verde)] (31.5, 10.7);
+\draw[very thick, wire0v] (31.5, 10.7) -- (33.1, 10.7);
+\node[lbl, anchor=east, font=\sffamily\tiny] at (28.6, 10.35) {$+$};
+\node[lbl, anchor=west, font=\sffamily\tiny] at (31.1, 10.35) {$-$};
+
+% DO1: R2 + L2_AtuValvula (Yellow)
+\node[pinlbl, anchor=east] at (22.25, 8.6) {DO1 (\%QX0.1)};
+\draw[thick, tealnode] (22.3, 8.6) -- (25.0, 8.6);
+\node[term] (tbdo1) at (23.6, 8.6) {};
+\node[lbl, above=2pt of tbdo1] {\texttt{TB\_DO:1}};
+\draw[thick, slateink] (25.0, 8.6) to[R, l=\texttt{R2}: \qty{2.2}{\kilo\ohm} \qty{0.5}{\watt}] (28.3, 8.6);
+\draw[thick, ledyellow] (28.3, 8.6) to[leDo, l=\texttt{L2\_AtuValvula} (Amarelo)] (31.5, 8.6);
+\draw[very thick, wire0v] (31.5, 8.6) -- (33.1, 8.6);
+\fill[wire0v] (33.1, 8.6) circle (1.8pt);
+\node[lbl, anchor=east, font=\sffamily\tiny] at (28.6, 8.25) {$+$};
+\node[lbl, anchor=west, font=\sffamily\tiny] at (31.1, 8.25) {$-$};
+
+% DO2: R3 + L3_SinalAlarme (Red)
+\node[pinlbl, anchor=east] at (22.25, 6.5) {DO2 (\%QX0.2)};
+\draw[thick, tealnode] (22.3, 6.5) -- (25.0, 6.5);
+\node[term] (tbdo2) at (23.6, 6.5) {};
+\node[lbl, above=2pt of tbdo2] {\texttt{TB\_DO:2}};
+\draw[thick, slateink] (25.0, 6.5) to[R, l=\texttt{R3}: \qty{2.2}{\kilo\ohm} \qty{0.5}{\watt}] (28.3, 6.5);
+\draw[thick, ledred] (28.3, 6.5) to[leDo, l=\texttt{L3\_SinalAlarme} (Verm.)] (31.5, 6.5);
+\draw[very thick, wire0v] (31.5, 6.5) -- (33.1, 6.5);
+\fill[wire0v] (33.1, 6.5) circle (1.8pt);
+\node[lbl, anchor=east, font=\sffamily\tiny] at (28.6, 6.15) {$+$};
+\node[lbl, anchor=west, font=\sffamily\tiny] at (31.1, 6.15) {$-$};
+
+% DO3: R4 + L4_StatusOper (White)
+\node[pinlbl, anchor=east] at (22.25, 4.4) {DO3 (\%QX0.3)};
+\draw[thick, tealnode] (22.3, 4.4) -- (25.0, 4.4);
+\node[term] (tbdo3) at (23.6, 4.4) {};
+\node[lbl, above=2pt of tbdo3] {\texttt{TB\_DO:3}};
+\draw[thick, slateink] (25.0, 4.4) to[R, l=\texttt{R4}: \qty{2.2}{\kilo\ohm} \qty{0.5}{\watt}] (28.3, 4.4);
+\draw[thick, ledwhite] (28.3, 4.4) to[leDo, l=\texttt{L4\_StatusOper} (Branco)] (31.5, 4.4);
+\draw[very thick, wire0v] (31.5, 4.4) -- (33.1, 4.4);
+\fill[wire0v] (33.1, 4.4) circle (1.8pt);
+\node[lbl, anchor=east, font=\sffamily\tiny] at (28.6, 4.05) {$+$};
+\node[lbl, anchor=west, font=\sffamily\tiny] at (31.1, 4.05) {$-$};
+
+% =========================================================================
+% BOTTOM TECHNICAL NOTES (Wrapped neatly inside outer frame)
+% =========================================================================
+\node[draw=slateink!35, fill=steelbg, rounded corners=3pt, anchor=west, inner sep=5pt, font=\sffamily\scriptsize, align=left] at (1.5, 0.65) {%
+  \textbf{Notas de Montagem:}
+  (1) Corrente nominal por saída \texttt{DO}: $I_{\mathrm{DO}} \approx (24 - V_f)/\qty{2.2}{\kilo\ohm} \approx \qty{10}{\milli\ampere}$ ($P_R \approx \qty{0.22}{\watt} < \qty{0.5}{\watt}$); aceita sinaleiros LED industriais 24~Vcc equivalentes.\\
+  (2) Todas as pontas flexíveis devem receber terminais tubulares (ilhos) e os bornes físicos do WEG PLC500 devem ser conferidos na serigrafia/manual antes da energização.
+};
+
+\end{circuitikz}
+\end{document}

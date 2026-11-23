@@ -1,6 +1,6 @@
 % ==============================================================================
 % main.tex
-% Documento raiz — Relatório Técnico-Científico conforme ABNT NBR 10719:2015
+% Documento raiz — Relatório Técnico-Científico
 % Classe: abntex2 | Compilador: pdflatex + bibtex (Overleaf / TeX Live)
 % ==============================================================================
 
@@ -18,7 +18,7 @@
 % --- Metadados institucionais centralizados ---
 \input{config/metadados}
 
-% --- Customização da capa e folha de rosto (ABNT NBR 10719:2015) ---
+% --- Customização da capa e folha de rosto ---
 \input{pretextual/folha_rosto_capa}
 
 % ==============================================================================
@@ -31,7 +31,7 @@
 \frenchspacing
 
 % ------------------------------------------------------------------------------
-% ELEMENTOS PRÉ-TEXTUAIS (ABNT NBR 10719:2015)
+% ELEMENTOS PRÉ-TEXTUAIS
 % ------------------------------------------------------------------------------
 \pretextual
 
@@ -41,7 +41,7 @@
 % Folha de rosto (sem ficha catalográfica no verso em modo oneside)
 \imprimirfolhaderosto*
 
-% Resumo em língua vernácula (ABNT NBR 6028:2021)
+% Resumo em língua vernácula
 \input{pretextual/resumo}
 
 % Abstract em língua estrangeira
@@ -68,7 +68,7 @@
 % Lista de símbolos
 \input{pretextual/simbolos}
 
-% Sumário (ABNT NBR 6027:2012)
+% Sumário
 \pdfbookmark[0]{\contentsname}{toc}
 \tableofcontents*
 \cleardoublepage
@@ -91,7 +91,7 @@
 % ------------------------------------------------------------------------------
 \postextual
 
-% Referências bibliográficas (ABNT NBR 6023:2018 via abntex2-alf)
+% Referências bibliográficas (abntex2-alf)
 \bibliography{referencias}
 
 % Apêndices

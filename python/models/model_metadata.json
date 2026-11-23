@@ -1,0 +1,395 @@
+{
+  "model_version": "1.0.0",
+  "trained_at_utc": "2026-11-23T14:18:25.357669Z",
+  "seed": 42,
+  "window_seconds": 60.0,
+  "baseline": {
+    "mu": 12.0,
+    "sigma": 2.5,
+    "eps": 0.01
+  },
+  "feature_names": [
+    "taxa_presenca_min",
+    "zscore_presenca",
+    "abs_zscore_presenca",
+    "duty_nivel",
+    "duty_sobretemp",
+    "chattering_index",
+    "veto_emergencia",
+    "veto_sobretemp",
+    "veto_watchdog",
+    "veto_nivel_sustentado"
+  ],
+  "feature_columns": [
+    "taxa_presenca_min",
+    "zscore_presenca",
+    "abs_zscore_presenca",
+    "duty_nivel",
+    "duty_sobretemp",
+    "chattering_index",
+    "veto_emergencia",
+    "veto_sobretemp",
+    "veto_watchdog",
+    "veto_nivel_sustentado"
+  ],
+  "class_labels": [
+    "NORMAL",
+    "ATENCAO",
+    "CRITICO",
+    "EMERGENCIA"
+  ],
+  "split_counts": {
+    "train": 2404,
+    "val": 553,
+    "test": 731
+  },
+  "leakage_verification": {
+    "feature_count": 10,
+    "forbidden_overlap_count": 0,
+    "train_val_gap_s": 67.5,
+    "val_test_gap_s": 60.0,
+    "overlapping_raw_samples": 0,
+    "leakage_free": true
+  },
+  "anomaly_detector": {
+    "algorithm": "StandardScaler + IsolationForest",
+    "normal_train_count": 1701,
+    "params": {
+      "n_estimators": 200,
+      "contamination": 0.02,
+      "random_state": 42
+    },
+    "val": {
+      "roc_auc": 0.8959,
+      "pr_auc": 0.8291,
+      "f1": 0.7399,
+      "precision": 0.9182,
+      "recall": 0.6196,
+      "anomaly_rate_pred": 0.1989,
+      "anomaly_rate_true": 0.2948
+    },
+    "test": {
+      "roc_auc": 0.8993,
+      "pr_auc": 0.8069,
+      "f1": 0.7299,
+      "precision": 0.8699,
+      "recall": 0.6287,
+      "anomaly_rate_pred": 0.1997,
+      "anomaly_rate_true": 0.2763
+    }
+  },
+  "severity_classifier": {
+    "selection_metric": "val_macro_f1",
+    "selected_model": "HistGradientBoostingClassifier",
+    "candidates": {
+      "HistGradientBoostingClassifier": {
+        "params": {
+          "max_iter": 100,
+          "learning_rate": 0.1,
+          "max_depth": 4
+        },
+        "val": {
+          "accuracy": 1.0,
+          "macro_f1": 1.0,
+          "weighted_f1": 1.0,
+          "log_loss": 0.0,
+          "roc_auc_ovr": 1.0,
+          "per_class": {
+            "NORMAL": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "support": 390
+            },
+            "ATENCAO": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "support": 42
+            },
+            "CRITICO": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "support": 101
+            },
+            "EMERGENCIA": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "support": 20
+            }
+          },
+          "confusion_matrix": [
+            [
+              390,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              42,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              101,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              20
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.9973,
+          "macro_f1": 0.9956,
+          "weighted_f1": 0.9973,
+          "log_loss": 0.0354,
+          "roc_auc_ovr": 0.9984,
+          "per_class": {
+            "NORMAL": {
+              "precision": 0.9981,
+              "recall": 1.0,
+              "f1": 0.9991,
+              "support": 529
+            },
+            "ATENCAO": {
+              "precision": 1.0,
+              "recall": 0.9818,
+              "f1": 0.9908,
+              "support": 55
+            },
+            "CRITICO": {
+              "precision": 0.9924,
+              "recall": 0.9924,
+              "f1": 0.9924,
+              "support": 132
+            },
+            "EMERGENCIA": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "support": 15
+            }
+          },
+          "confusion_matrix": [
+            [
+              529,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              54,
+              1,
+              0
+            ],
+            [
+              1,
+              0,
+              131,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              15
+            ]
+          ]
+        }
+      },
+      "RandomForestClassifier": {
+        "params": {
+          "n_estimators": 200,
+          "max_depth": null,
+          "class_weight": "balanced"
+        },
+        "val": {
+          "accuracy": 1.0,
+          "macro_f1": 1.0,
+          "weighted_f1": 1.0,
+          "log_loss": 0.0017,
+          "roc_auc_ovr": 1.0,
+          "per_class": {
+            "NORMAL": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "support": 390
+            },
+            "ATENCAO": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "support": 42
+            },
+            "CRITICO": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "support": 101
+            },
+            "EMERGENCIA": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "support": 20
+            }
+          },
+          "confusion_matrix": [
+            [
+              390,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              42,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              101,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              20
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.9986,
+          "macro_f1": 0.9988,
+          "weighted_f1": 0.9986,
+          "log_loss": 0.0028,
+          "roc_auc_ovr": 1.0,
+          "per_class": {
+            "NORMAL": {
+              "precision": 0.9981,
+              "recall": 1.0,
+              "f1": 0.9991,
+              "support": 529
+            },
+            "ATENCAO": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "support": 55
+            },
+            "CRITICO": {
+              "precision": 1.0,
+              "recall": 0.9924,
+              "f1": 0.9962,
+              "support": 132
+            },
+            "EMERGENCIA": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "support": 15
+            }
+          },
+          "confusion_matrix": [
+            [
+              529,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              55,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              131,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              15
+            ]
+          ]
+        }
+      }
+    },
+    "feature_importances": [
+      {
+        "feature": "veto_emergencia",
+        "importance_mean": 0.2698,
+        "importance_std": 0.0144
+      },
+      {
+        "feature": "abs_zscore_presenca",
+        "importance_mean": 0.2431,
+        "importance_std": 0.0089
+      },
+      {
+        "feature": "duty_nivel",
+        "importance_mean": 0.2163,
+        "importance_std": 0.007
+      },
+      {
+        "feature": "duty_sobretemp",
+        "importance_mean": 0.0869,
+        "importance_std": 0.0046
+      },
+      {
+        "feature": "veto_watchdog",
+        "importance_mean": 0.0332,
+        "importance_std": 0.0031
+      },
+      {
+        "feature": "taxa_presenca_min",
+        "importance_mean": 0.0,
+        "importance_std": 0.0
+      },
+      {
+        "feature": "zscore_presenca",
+        "importance_mean": 0.0,
+        "importance_std": 0.0
+      },
+      {
+        "feature": "chattering_index",
+        "importance_mean": 0.0,
+        "importance_std": 0.0
+      },
+      {
+        "feature": "veto_sobretemp",
+        "importance_mean": 0.0,
+        "importance_std": 0.0
+      },
+      {
+        "feature": "veto_nivel_sustentado",
+        "importance_mean": 0.0,
+        "importance_std": 0.0
+      }
+    ]
+  },
+  "library_versions": {
+    "scikit_learn": "1.9.1",
+    "numpy": "2.5.5",
+    "pandas": "3.1.1",
+    "joblib": "1.6.0"
+  }
+}

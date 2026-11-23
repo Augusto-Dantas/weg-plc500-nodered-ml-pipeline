@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DiagnosticoAtuacaoPLC500",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "severidade",
+    "diagnostico",
+    "causa_provavel",
+    "comandos_atuadores",
+    "requer_relatorio",
+    "resumo_executivo"
+  ],
+  "properties": {
+    "severidade": {
+      "type": "string",
+      "enum": ["NORMAL", "ATENCAO", "CRITICO", "EMERGENCIA"]
+    },
+    "diagnostico": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 400
+    },
+    "causa_provavel": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 250
+    },
+    "comandos_atuadores": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cmd_motor", "cmd_valvula", "cmd_alarme"],
+      "properties": {
+        "cmd_motor": { "type": "boolean" },
+        "cmd_valvula": { "type": "boolean" },
+        "cmd_alarme": { "type": "boolean" }
+      }
+    },
+    "requer_relatorio": { "type": "boolean" },
+    "resumo_executivo": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 800
+    }
+  }
+}

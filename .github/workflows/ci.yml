@@ -1,0 +1,60 @@
+name: CI — WEG PLC500 + Modbus TCP/IP + Node-RED + ML Pipeline
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-test:
+    name: Lint, Contract Validators & Pytest (Python 3.12)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r python/requirements.txt pytest ruff pyyaml pypdfium2 Pillow
+
+      - name: Run Ruff linter
+        run: |
+          ruff check python hardware/scripts tests_e2e
+
+      - name: Validate PLCopen XML, KiCad 8 schematic, Node-RED flows.json, and PostgreSQL init.sql
+        run: |
+          PYTHONPATH=python python -c "
+          from pathlib import Path
+          from tests_e2e.validators import (
+              validate_plcopen_xml,
+              validate_kicad8_sch,
+              assert_nodered_flows_contract,
+              assert_plc500_sql_contract,
+          )
+          assert validate_plcopen_xml(Path('plc/codesys/plc500_project_plcopen.xml')).ok
+          assert validate_kicad8_sch(Path('hardware/kicad/plc500_bench.kicad_sch')).ok
+          assert_nodered_flows_contract(
+              Path('node-red/flows.json'),
+              Path('node-red/schemas/diagnostico_atuacao.schema.json'),
+          )
+          assert_plc500_sql_contract(Path('node-red/sql/init.sql'))
+          "
+
+      - name: Run unit, ML, FastAPI, and Modbus simulator tests (pytest)
+        run: |
+          PYTHONPATH=python pytest python/tests -v
+
+      - name: Run E2E contract validation suite (pytest)
+        run: |
+          PYTHONPATH=python pytest tests_e2e -k "not local_toolchain" -v

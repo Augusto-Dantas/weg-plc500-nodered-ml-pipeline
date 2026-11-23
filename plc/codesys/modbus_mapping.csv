@@ -1,0 +1,24 @@
+fc,address,register_type,symbol,alias,iec_type,access,range_or_values,default,description
+FC02,0,Discrete Input,xDI_Presenca,DI0;%IX0.0,BOOL,RO,0..1,FALSE,Debounced optical/inductive part presence sensor (B1 NA 50 ms TON)
+FC02,1,Discrete Input,xDI_NivelAlto,DI1;%IX0.1,BOOL,RO,0..1,FALSE,Debounced reservoir high-level switch (B2 NA 50 ms TON)
+FC02,2,Discrete Input,xDI_Sobretemp,DI2;%IX0.2,BOOL,RO,0..1,FALSE,Debounced motor-pump overtemperature thermostat (B3 NA 50 ms TON)
+FC02,3,Discrete Input,xDI_EmergenciaOK,DI3;%IX0.3,BOOL,RO,0..1,TRUE,Immediate fail-safe NC emergency stop status (B4 NF no debounce; FALSE=active/wire-break)
+FC02,4,Discrete Input,xFlag_EmergTravada,FLAG_EMERG,BOOL,RO,0..1,FALSE,Latched emergency interlock flag awaiting safe reset (DI3=1 AND DI2=0)
+FC02,5,Discrete Input,xFlag_WatchdogAtivo,FLAG_WD,BOOL,RO,0..1,FALSE,Supervisory heartbeat watchdog timeout flag (> uiTimeout_WD_ms)
+FC01;FC05;FC15,0,Coil,xCmd_Motor,DO0_CMD,BOOL,RW,0..1,FALSE,Supervisory command for motor/conveyor LED L1 (DO0; vetoed by local interlocks)
+FC01;FC05;FC15,1,Coil,xCmd_Valvula,DO1_CMD,BOOL,RW,0..1,FALSE,Supervisory command for relief/cooling valve LED L2 (DO1; ORed with local high-level/overtemp)
+FC01;FC05;FC15,2,Coil,xCmd_Alarme,DO2_CMD,BOOL,RW,0..1,FALSE,Supervisory command for alarm beacon LED L3 (DO2; ORed with local interlocks/IA sev>=2)
+FC01;FC05;FC15,3,Coil,xCmd_ResetFalha,CMD_RESET,BOOL,RW,0..1 (rising-edge pulse),FALSE,Fault reset rising-edge pulse (R_TRIG; valid only when DI3=1 AND DI2=0)
+FC01;FC05;FC15,4,Coil,xCmd_HabRemoto,CMD_REMOTE,BOOL,RW,0..1,FALSE,Enables supervised remote automatic mode (1=active; 0=INIT)
+FC04,0,Input Register,uiCnt_Presenca,IR0,UINT,RO,0..65535,0,Accumulated rising-edge counter for B1_SensPresenca (16-bit modular wrap)
+FC04,1,Input Register,uiCnt_NivelAlto,IR1,UINT,RO,0..65535,0,Accumulated rising-edge counter for B2_SensNivelAlto (16-bit modular wrap)
+FC04,2,Input Register,uiCnt_Sobretemp,IR2,UINT,RO,0..65535,0,Accumulated rising-edge counter for B3_SensSobretemp (16-bit modular wrap)
+FC04,3,Input Register,uiCnt_Emergencia,IR3,UINT,RO,0..65535,0,Accumulated emergency activation counter on NOT xDI_EmergenciaOK (16-bit modular wrap)
+FC04,4,Input Register,uiEstado_CLP,IR4,UINT,RO,0=INIT;1=NORMAL_AUTO;2=ALERTA;3=MODO_DEGRADADO;4=EMERGENCIA_TRAV,0,Deterministic PLC finite state machine state code
+FC04,5,Input Register,wMascara_DO_Real,IR5,WORD,RO,0..15 (bit0=DO0..bit3=DO3),0,Physical digital output bitmask for closed-loop veto audit
+FC04,6,Input Register,uiEcho_Heartbeat,IR6,UINT,RO,0..65535,0,Echo of last distinct supervisory heartbeat value accepted from HR[0]
+FC04,7,Input Register,uiCod_Intertrav,IR7,UINT,RO,0=Nenhum;1=Emergencia;2=Sobretemp;3=Watchdog,0,Active local safety interlock veto cause code
+FC03;FC06;FC16,0,Holding Register,uiHeartbeat_Sup,uiHeartbeat_NR;uiHeartbeat_N8N,UINT,RW,1..65535 (0 at cold boot),0,Cyclic supervisory heartbeat counter incremented every polling cycle
+FC03;FC06;FC16,1,Holding Register,uiTimeout_WD_ms,HR1,UINT,RW,2000..30000 (out-of-range fallback 5000),5000,Configurable watchdog timeout threshold in milliseconds
+FC03;FC06;FC16,2,Holding Register,uiSeveridade_IA,HR2,UINT,RW,0=NORMAL;1=ATENCAO;2=CRITICO;3=EMERGENCIA,0,AI/statistical pipeline severity code written by supervisory layer
+FC03;FC06;FC16,3,Holding Register,uiVersao_Mapa,HR3,UINT,RW,100 (enforced every scan),100,Modbus register map contract version identifier (v1.0 = 100; overwritten to 100 every scan)

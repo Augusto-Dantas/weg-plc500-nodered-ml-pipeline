@@ -1,0 +1,138 @@
+{
+  "seed": 42,
+  "duration_hours": 18.0,
+  "sample_rate_hz": 2.0,
+  "window_seconds": 60.0,
+  "samples_per_window": 120,
+  "stride_seconds": 15.0,
+  "raw_sample_count": 129600,
+  "window_count": 3688,
+  "model_feature_columns": [
+    "taxa_presenca_min",
+    "zscore_presenca",
+    "abs_zscore_presenca",
+    "duty_nivel",
+    "duty_sobretemp",
+    "chattering_index",
+    "veto_emergencia",
+    "veto_sobretemp",
+    "veto_watchdog",
+    "veto_nivel_sustentado"
+  ],
+  "audit_feature_columns": [
+    "delta_cnt_presenca",
+    "delta_cnt_nivel",
+    "delta_cnt_sobretemp",
+    "delta_cnt_emergencia",
+    "duty_presenca",
+    "duty_emerg_ok",
+    "duty_emerg_travada",
+    "duty_watchdog"
+  ],
+  "temporal_purge_audit": {
+    "purge_gap_required_s": 60.0,
+    "train_val_gap_s": 67.5,
+    "val_test_gap_s": 60.0,
+    "overlapping_raw_samples": 0,
+    "leakage_free": true
+  },
+  "wrap_around_events": {
+    "cnt_presenca": 1,
+    "cnt_nivel_alto": 1,
+    "cnt_sobretemp": 1,
+    "cnt_emergencia": 1
+  },
+  "total_wrap_arounds": 4,
+  "scenarios": {
+    "cadence_drift": 49,
+    "chattering_b1": 132,
+    "conveyor_blockage": 100,
+    "emergency_stop": 104,
+    "intermittent_high_level": 147,
+    "multi_fault": 148,
+    "nominal": 2620,
+    "overtemperature": 138,
+    "sustained_high_level": 142,
+    "watchdog_timeout": 108
+  },
+  "splits": {
+    "train": {
+      "window_count": 2404,
+      "ratio": 0.6518,
+      "window_start_s_min": 0.0,
+      "window_end_s_max": 42112.5,
+      "raw_idx_min": 0,
+      "raw_idx_max": 84224,
+      "severity_counts": {
+        "0": 1701,
+        "1": 200,
+        "2": 457,
+        "3": 46
+      },
+      "scenario_counts": {
+        "cadence_drift": 38,
+        "chattering_b1": 87,
+        "conveyor_blockage": 66,
+        "emergency_stop": 67,
+        "intermittent_high_level": 96,
+        "multi_fault": 96,
+        "nominal": 1701,
+        "overtemperature": 92,
+        "sustained_high_level": 92,
+        "watchdog_timeout": 69
+      }
+    },
+    "val": {
+      "window_count": 553,
+      "ratio": 0.1499,
+      "window_start_s_min": 42180.0,
+      "window_end_s_max": 51900.0,
+      "raw_idx_min": 84360,
+      "raw_idx_max": 103799,
+      "severity_counts": {
+        "0": 390,
+        "1": 42,
+        "2": 101,
+        "3": 20
+      },
+      "scenario_counts": {
+        "cadence_drift": 6,
+        "chattering_b1": 20,
+        "conveyor_blockage": 14,
+        "emergency_stop": 18,
+        "intermittent_high_level": 23,
+        "multi_fault": 24,
+        "nominal": 390,
+        "overtemperature": 20,
+        "sustained_high_level": 20,
+        "watchdog_timeout": 18
+      }
+    },
+    "test": {
+      "window_count": 731,
+      "ratio": 0.1982,
+      "window_start_s_min": 51960.0,
+      "window_end_s_max": 64795.0,
+      "raw_idx_min": 103920,
+      "raw_idx_max": 129589,
+      "severity_counts": {
+        "0": 529,
+        "1": 55,
+        "2": 132,
+        "3": 15
+      },
+      "scenario_counts": {
+        "cadence_drift": 5,
+        "chattering_b1": 25,
+        "conveyor_blockage": 20,
+        "emergency_stop": 19,
+        "intermittent_high_level": 28,
+        "multi_fault": 28,
+        "nominal": 529,
+        "overtemperature": 26,
+        "sustained_high_level": 30,
+        "watchdog_timeout": 21
+      }
+    }
+  }
+}

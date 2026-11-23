@@ -1,0 +1,594 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0201"
+         xmlns:xhtml="http://www.w3.org/1999/xhtml"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <fileHeader companyName="WEG PLC500 Portfolio (RT-AUT-2026-001)"
+              productName="CODESYS V3.5"
+              productVersion="CODESYS V3.5 SP19"
+              creationDateTime="2026-11-23T14:00:00Z" />
+
+  <contentHeader name="PLC500_Modbus_Safety_Pipeline"
+                 version="1.0.0"
+                 modificationDateTime="2026-11-23T14:00:00Z"
+                 organization="Augusto-Dantas"
+                 author="Augusto Dantas"
+                 language="en-US">
+    <Comment>WEG PLC500 deterministic safety interlock, 50 ms debounce, supervisory watchdog and zero-based Modbus TCP Server (ETH2 192.168.10.10:502, Unit ID 1).</Comment>
+    <coordinateInfo>
+      <pageSize x="2000" y="1500" />
+      <fbd>
+        <scaling x="1" y="1" />
+      </fbd>
+      <ld>
+        <scaling x="1" y="1" />
+      </ld>
+      <sfc>
+        <scaling x="1" y="1" />
+      </sfc>
+    </coordinateInfo>
+    <addData>
+      <data name="http://www.3s-software.com/plcopenxml/projectinformation" handleUnknown="implementation">
+        <ProjectInformation />
+      </data>
+    </addData>
+  </contentHeader>
+
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="FB_DebounceCounter" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="xRawInput">
+              <type><BOOL /></type>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Sinal fisico bruto (%IX0.x)</xhtml></documentation>
+            </variable>
+            <variable name="xEnableDebounce">
+              <type><BOOL /></type>
+              <initialValue><simpleValue value="TRUE" /></initialValue>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">TRUE = filtro TON (DI0..DI2); FALSE = imediato sem retardo (DI3 NF)</xhtml></documentation>
+            </variable>
+            <variable name="tDebounceTime">
+              <type><TIME /></type>
+              <initialValue><simpleValue value="T#50MS" /></initialValue>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Tempo de estabilizacao de contato</xhtml></documentation>
+            </variable>
+            <variable name="xCountOnFalling">
+              <type><BOOL /></type>
+              <initialValue><simpleValue value="FALSE" /></initialValue>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">FALSE = borda de subida (NA); TRUE = borda de descida / NOT (NF DI3)</xhtml></documentation>
+            </variable>
+          </inputVars>
+          <outputVars>
+            <variable name="xFiltered">
+              <type><BOOL /></type>
+              <initialValue><simpleValue value="FALSE" /></initialValue>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Estado filtrado (ou direto para DI3)</xhtml></documentation>
+            </variable>
+          </outputVars>
+          <inOutVars>
+            <variable name="uiCounter">
+              <type><UINT /></type>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Contador modular 16 bits (wrap natural 65535 -&gt; 0)</xhtml></documentation>
+            </variable>
+          </inOutVars>
+          <localVars>
+            <variable name="tonDebounce">
+              <type><derived name="STANDARD.TON" /></type>
+            </variable>
+            <variable name="rtEdge">
+              <type><derived name="STANDARD.R_TRIG" /></type>
+            </variable>
+            <variable name="xEdgeSignal">
+              <type><BOOL /></type>
+              <initialValue><simpleValue value="FALSE" /></initialValue>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml"><![CDATA[IF xEnableDebounce THEN
+  tonDebounce(IN := xRawInput, PT := tDebounceTime);
+  xFiltered := tonDebounce.Q;
+ELSE
+  (* Entrada fail-safe DI3 atua sem retardo no primeiro ciclo de varredura *)
+  xFiltered := xRawInput;
+END_IF;
+
+IF xCountOnFalling THEN
+  xEdgeSignal := NOT xFiltered;
+ELSE
+  xEdgeSignal := xFiltered;
+END_IF;
+
+rtEdge(CLK := xEdgeSignal);
+IF rtEdge.Q THEN
+  uiCounter := uiCounter + 1;
+END_IF;]]></xhtml>
+          </ST>
+        </body>
+      </pou>
+
+      <pou name="FB_WatchdogHeartbeat" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="uiHeartbeat">
+              <type><UINT /></type>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">HR[0]: uiHeartbeat_Sup (aliases: uiHeartbeat_NR, uiHeartbeat_N8N)</xhtml></documentation>
+            </variable>
+            <variable name="uiTimeoutMs">
+              <type><UINT /></type>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">HR[1]: uiTimeout_WD_ms [2000..30000]</xhtml></documentation>
+            </variable>
+          </inputVars>
+          <outputVars>
+            <variable name="uiEcho_Heartbeat">
+              <type><UINT /></type>
+              <initialValue><simpleValue value="0" /></initialValue>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[6]: uiEcho_Heartbeat</xhtml></documentation>
+            </variable>
+            <variable name="xFlag_WatchdogAtivo">
+              <type><BOOL /></type>
+              <initialValue><simpleValue value="FALSE" /></initialValue>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[5]: xFlag_WatchdogAtivo</xhtml></documentation>
+            </variable>
+            <variable name="tActiveLimit">
+              <type><TIME /></type>
+              <initialValue><simpleValue value="T#5S" /></initialValue>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Limiar efetivo em TIME</xhtml></documentation>
+            </variable>
+          </outputVars>
+          <localVars>
+            <variable name="tonWatchdog">
+              <type><derived name="STANDARD.TON" /></type>
+            </variable>
+            <variable name="uiLastHeartbeat">
+              <type><UINT /></type>
+              <initialValue><simpleValue value="0" /></initialValue>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml"><![CDATA[IF (uiTimeoutMs >= 2000) AND (uiTimeoutMs <= 30000) THEN
+  tActiveLimit := UINT_TO_TIME(uiTimeoutMs);
+ELSE
+  tActiveLimit := T#5S;
+END_IF;
+
+(* Avaliar TON ANTES de atualizar uiLastHeartbeat para reiniciar por 1 ciclo na mudanca *)
+tonWatchdog(
+  IN := (uiHeartbeat = uiLastHeartbeat),
+  PT := tActiveLimit
+);
+
+IF uiHeartbeat <> uiLastHeartbeat THEN
+  uiLastHeartbeat := uiHeartbeat;
+  uiEcho_Heartbeat := uiHeartbeat;
+END_IF;
+
+xFlag_WatchdogAtivo := tonWatchdog.Q;]]></xhtml>
+          </ST>
+        </body>
+      </pou>
+
+      <pou name="FB_SafetyInterlock" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="xDI_EmergenciaOK">
+              <type><BOOL /></type>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[3]: Contato NF; FALSE = emergencia ativa / fio partido</xhtml></documentation>
+            </variable>
+            <variable name="xDI_Sobretemp">
+              <type><BOOL /></type>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[2]: Termostato filtrado</xhtml></documentation>
+            </variable>
+            <variable name="xDI_NivelAlto">
+              <type><BOOL /></type>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[1]: Nivel alto filtrado</xhtml></documentation>
+            </variable>
+            <variable name="xFlag_WatchdogAtivo">
+              <type><BOOL /></type>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[5]: Watchdog expirado</xhtml></documentation>
+            </variable>
+            <variable name="xCmd_Motor">
+              <type><BOOL /></type>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Coil[0]</xhtml></documentation>
+            </variable>
+            <variable name="xCmd_Valvula">
+              <type><BOOL /></type>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Coil[1]</xhtml></documentation>
+            </variable>
+            <variable name="xCmd_Alarme">
+              <type><BOOL /></type>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Coil[2]</xhtml></documentation>
+            </variable>
+            <variable name="xCmd_ResetFalha">
+              <type><BOOL /></type>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Coil[3]</xhtml></documentation>
+            </variable>
+            <variable name="xCmd_HabRemoto">
+              <type><BOOL /></type>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Coil[4]</xhtml></documentation>
+            </variable>
+            <variable name="uiSeveridade_IA">
+              <type><UINT /></type>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">HR[2]</xhtml></documentation>
+            </variable>
+          </inputVars>
+          <outputVars>
+            <variable name="xFlag_EmergTravada">
+              <type><BOOL /></type>
+              <initialValue><simpleValue value="FALSE" /></initialValue>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[4]</xhtml></documentation>
+            </variable>
+            <variable name="uiEstado_CLP">
+              <type><UINT /></type>
+              <initialValue><simpleValue value="0" /></initialValue>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[4]</xhtml></documentation>
+            </variable>
+            <variable name="uiCod_Intertrav">
+              <type><UINT /></type>
+              <initialValue><simpleValue value="0" /></initialValue>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[7]</xhtml></documentation>
+            </variable>
+            <variable name="xDO0_Motor">
+              <type><BOOL /></type>
+              <initialValue><simpleValue value="FALSE" /></initialValue>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">%QX0.0</xhtml></documentation>
+            </variable>
+            <variable name="xDO1_Valvula">
+              <type><BOOL /></type>
+              <initialValue><simpleValue value="FALSE" /></initialValue>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">%QX0.1</xhtml></documentation>
+            </variable>
+            <variable name="xDO2_Alarme">
+              <type><BOOL /></type>
+              <initialValue><simpleValue value="FALSE" /></initialValue>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">%QX0.2</xhtml></documentation>
+            </variable>
+            <variable name="xDO3_StatusOper">
+              <type><BOOL /></type>
+              <initialValue><simpleValue value="FALSE" /></initialValue>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">%QX0.3</xhtml></documentation>
+            </variable>
+            <variable name="wMascara_DO_Real">
+              <type><WORD /></type>
+              <initialValue><simpleValue value="0" /></initialValue>
+              <documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[5]</xhtml></documentation>
+            </variable>
+          </outputVars>
+          <localVars>
+            <variable name="rtResetFalha">
+              <type><derived name="STANDARD.R_TRIG" /></type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml"><![CDATA[(* Deteccao de borda de subida no comando de rearme executada em todo ciclo sem mutar Coil[3] *)
+rtResetFalha(CLK := xCmd_ResetFalha);
+
+(* Travamento de emergencia fail-safe e rearme seguro *)
+IF NOT xDI_EmergenciaOK THEN
+  xFlag_EmergTravada := TRUE;
+ELSIF xCmd_ResetFalha AND rtResetFalha.Q AND xDI_EmergenciaOK AND NOT xDI_Sobretemp THEN
+  xFlag_EmergTravada := FALSE;
+END_IF;
+
+(* Maquina de estados e intertravamento local com precedencia estrita *)
+IF xFlag_EmergTravada THEN
+  uiEstado_CLP    := 4;
+  uiCod_Intertrav := 1;
+  xDO0_Motor      := FALSE;
+  xDO1_Valvula    := FALSE;
+  xDO2_Alarme     := TRUE;
+  xDO3_StatusOper := FALSE;
+ELSIF xDI_Sobretemp THEN
+  uiEstado_CLP    := 2;
+  uiCod_Intertrav := 2;
+  xDO0_Motor      := FALSE;
+  xDO1_Valvula    := TRUE;
+  xDO2_Alarme     := TRUE;
+  (* Reconciliacao 04_implementacao_clp.tex:141 vs :165/PROJECT.md:110: exige modo remoto ativo alem de watchdog saudavel *)
+  xDO3_StatusOper := (NOT xFlag_WatchdogAtivo) AND xCmd_HabRemoto;
+ELSIF xFlag_WatchdogAtivo THEN
+  uiEstado_CLP    := 3;
+  uiCod_Intertrav := 3;
+  xDO0_Motor      := FALSE;
+  xDO1_Valvula    := xDI_NivelAlto;
+  xDO2_Alarme     := TRUE;
+  xDO3_StatusOper := FALSE;
+ELSIF xCmd_HabRemoto THEN
+  uiCod_Intertrav := 0;
+  uiEstado_CLP    := SEL((uiSeveridade_IA > 0) OR xDI_NivelAlto, UINT#1, UINT#2);
+  xDO0_Motor      := xCmd_Motor;
+  xDO1_Valvula    := xCmd_Valvula OR xDI_NivelAlto;
+  xDO2_Alarme     := xCmd_Alarme OR (uiSeveridade_IA >= 2);
+  xDO3_StatusOper := TRUE;
+ELSE
+  uiEstado_CLP    := 0;
+  uiCod_Intertrav := 0;
+  xDO0_Motor      := FALSE;
+  xDO1_Valvula    := FALSE;
+  xDO2_Alarme     := FALSE;
+  xDO3_StatusOper := FALSE;
+END_IF;
+
+(* Espelhamento das saidas fisicas reais em bitmask (IR[5]) *)
+wMascara_DO_Real := BOOL_TO_WORD(xDO0_Motor)
+                 OR SHL(BOOL_TO_WORD(xDO1_Valvula), 1)
+                 OR SHL(BOOL_TO_WORD(xDO2_Alarme), 2)
+                 OR SHL(BOOL_TO_WORD(xDO3_StatusOper), 3);]]></xhtml>
+          </ST>
+        </body>
+      </pou>
+
+      <pou name="PLC_PRG" pouType="program">
+        <interface>
+          <localVars>
+            <variable name="fbDebPresenca"><type><derived name="FB_DebounceCounter" /></type></variable>
+            <variable name="fbDebNivel"><type><derived name="FB_DebounceCounter" /></type></variable>
+            <variable name="fbDebTemp"><type><derived name="FB_DebounceCounter" /></type></variable>
+            <variable name="rtEmergencia"><type><derived name="STANDARD.R_TRIG" /></type></variable>
+            <variable name="fbWatchdog"><type><derived name="FB_WatchdogHeartbeat" /></type></variable>
+            <variable name="fbInterlock"><type><derived name="FB_SafetyInterlock" /></type></variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml"><![CDATA[(* 1 & 2. Debounce (50 ms em DI0..DI2, imediato NF em DI3) e contadores modulares 16 bits *)
+GVL_Modbus.xRaw_DI0_Presenca := %IX0.0;
+fbDebPresenca(
+  xRawInput       := %IX0.0,
+  xEnableDebounce := TRUE,
+  tDebounceTime   := T#50MS,
+  xCountOnFalling := FALSE,
+  uiCounter       := GVL_Modbus.uiCnt_Presenca
+);
+GVL_Modbus.xDI_Presenca := fbDebPresenca.xFiltered;
+
+GVL_Modbus.xRaw_DI1_NivelAlto := %IX0.1;
+fbDebNivel(
+  xRawInput       := %IX0.1,
+  xEnableDebounce := TRUE,
+  tDebounceTime   := T#50MS,
+  xCountOnFalling := FALSE,
+  uiCounter       := GVL_Modbus.uiCnt_NivelAlto
+);
+GVL_Modbus.xDI_NivelAlto := fbDebNivel.xFiltered;
+
+GVL_Modbus.xRaw_DI2_Sobretemp := %IX0.2;
+fbDebTemp(
+  xRawInput       := %IX0.2,
+  xEnableDebounce := TRUE,
+  tDebounceTime   := T#50MS,
+  xCountOnFalling := FALSE,
+  uiCounter       := GVL_Modbus.uiCnt_Sobretemp
+);
+GVL_Modbus.xDI_Sobretemp := fbDebTemp.xFiltered;
+
+GVL_Modbus.xRaw_DI3_Emergencia := %IX0.3;
+GVL_Modbus.xDI_EmergenciaOK := %IX0.3;
+rtEmergencia(CLK := NOT GVL_Modbus.xDI_EmergenciaOK);
+IF rtEmergencia.Q THEN
+  GVL_Modbus.uiCnt_Emergencia := GVL_Modbus.uiCnt_Emergencia + 1;
+END_IF;
+
+(* 3. Supervisao de enlace Modbus TCP/IP (Watchdog via HR[0]/HR[1]) *)
+fbWatchdog(
+  uiHeartbeat         := GVL_Modbus.uiHeartbeat_Sup,
+  uiTimeoutMs         := GVL_Modbus.uiTimeout_WD_ms,
+  uiEcho_Heartbeat    => GVL_Modbus.uiEcho_Heartbeat,
+  xFlag_WatchdogAtivo => GVL_Modbus.xFlag_WatchdogAtivo
+);
+
+(* 4, 5 & 6a. Travamento fail-safe, FSM com precedencia estrita e wMascara_DO_Real *)
+fbInterlock(
+  xDI_EmergenciaOK    := GVL_Modbus.xDI_EmergenciaOK,
+  xDI_Sobretemp       := GVL_Modbus.xDI_Sobretemp,
+  xDI_NivelAlto       := GVL_Modbus.xDI_NivelAlto,
+  xFlag_WatchdogAtivo := GVL_Modbus.xFlag_WatchdogAtivo,
+  xCmd_Motor          := GVL_Modbus.xCmd_Motor,
+  xCmd_Valvula        := GVL_Modbus.xCmd_Valvula,
+  xCmd_Alarme         := GVL_Modbus.xCmd_Alarme,
+  xCmd_ResetFalha     := GVL_Modbus.xCmd_ResetFalha,
+  xCmd_HabRemoto      := GVL_Modbus.xCmd_HabRemoto,
+  uiSeveridade_IA     := GVL_Modbus.uiSeveridade_IA,
+  xFlag_EmergTravada  => GVL_Modbus.xFlag_EmergTravada,
+  uiEstado_CLP        => GVL_Modbus.uiEstado_CLP,
+  uiCod_Intertrav     => GVL_Modbus.uiCod_Intertrav,
+  xDO0_Motor          => GVL_Modbus.xDO0_Motor,
+  xDO1_Valvula        => GVL_Modbus.xDO1_Valvula,
+  xDO2_Alarme         => GVL_Modbus.xDO2_Alarme,
+  xDO3_StatusOper     => GVL_Modbus.xDO3_StatusOper,
+  wMascara_DO_Real    => GVL_Modbus.wMascara_DO_Real
+);
+
+(* Escrita direta nas saidas fisicas 24 Vcc PNP (%QX0.0..%QX0.3) *)
+%QX0.0 := GVL_Modbus.xDO0_Motor;
+%QX0.1 := GVL_Modbus.xDO1_Valvula;
+%QX0.2 := GVL_Modbus.xDO2_Alarme;
+%QX0.3 := GVL_Modbus.xDO3_StatusOper;
+
+(* 6b. Reforco da versao do mapa Modbus a cada ciclo de 10 ms *)
+GVL_Modbus.uiVersao_Mapa := 100;]]></xhtml>
+          </ST>
+        </body>
+      </pou>
+    </pous>
+  </types>
+
+  <instances>
+    <configurations>
+      <configuration name="WEG_PLC500">
+        <resource name="Application">
+          <!-- STRICT SEQUENCE: <task> MUST precede <globalVars> -->
+          <task name="MainTask" interval="PT0.01S" priority="1">
+            <pouInstance name="PLC_PRG" typeName="PLC_PRG" />
+            <addData>
+              <data name="http://www.3s-software.com/plcopenxml/tasksettings" handleUnknown="implementation">
+                <TaskSettings KindOfTask="Cyclic" Interval="10000" IntervalUnit="us" Priority="1">
+                  <Watchdog Enabled="false" TimeUnit="ms" />
+                </TaskSettings>
+              </data>
+            </addData>
+          </task>
+
+          <globalVars name="GVL_Modbus">
+            <!-- 1. E/S Fisicas Nativas - WEG PLC500 Local_IO (24 Vcc PNP) -->
+            <variable name="xRaw_DI0_Presenca" address="%IX0.0"><type><BOOL /></type><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">B1_SensPresenca - Contato NA</xhtml></documentation></variable>
+            <variable name="xRaw_DI1_NivelAlto" address="%IX0.1"><type><BOOL /></type><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">B2_SensNivelAlto - Contato NA</xhtml></documentation></variable>
+            <variable name="xRaw_DI2_Sobretemp" address="%IX0.2"><type><BOOL /></type><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">B3_SensSobretemp - Contato NA</xhtml></documentation></variable>
+            <variable name="xRaw_DI3_Emergencia" address="%IX0.3"><type><BOOL /></type><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">B4_Emergencia - Contato NF fail-safe (FALSE = emerg./fio partido)</xhtml></documentation></variable>
+            <variable name="xDO0_Motor" address="%QX0.0"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">L1_AtuMotor - LED Verde</xhtml></documentation></variable>
+            <variable name="xDO1_Valvula" address="%QX0.1"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">L2_AtuValvula - LED Amarelo</xhtml></documentation></variable>
+            <variable name="xDO2_Alarme" address="%QX0.2"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">L3_SinalAlarme - LED Vermelho</xhtml></documentation></variable>
+            <variable name="xDO3_StatusOper" address="%QX0.3"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">L4_StatusOper - LED Branco</xhtml></documentation></variable>
+            <!-- 2. Discrete Inputs - Modbus FC02 (0..5) -->
+            <variable name="xDI_Presenca"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[0]: Estado filtrado (TON 50 ms) de B1_SensPresenca</xhtml></documentation></variable>
+            <variable name="xDI_NivelAlto"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[1]: Estado filtrado (TON 50 ms) de B2_SensNivelAlto</xhtml></documentation></variable>
+            <variable name="xDI_Sobretemp"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[2]: Estado filtrado (TON 50 ms) de B3_SensSobretemp</xhtml></documentation></variable>
+            <variable name="xDI_EmergenciaOK"><type><BOOL /></type><initialValue><simpleValue value="TRUE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[3]: Estado imediato NF de B4_Emergencia (TRUE em repouso; FALSE = emergencia)</xhtml></documentation></variable>
+            <variable name="xFlag_EmergTravada"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[4]: 1 = emergencia travada aguardando rearme seguro</xhtml></documentation></variable>
+            <variable name="xFlag_WatchdogAtivo"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[5]: 1 = heartbeat estagnado &gt; uiTimeout_WD_ms</xhtml></documentation></variable>
+            <!-- 3. Coils - Modbus FC01/05/15 (0..4) -->
+            <variable name="xCmd_Motor"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Coil[0]: Comando remoto para L1_AtuMotor (DO0)</xhtml></documentation></variable>
+            <variable name="xCmd_Valvula"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Coil[1]: Comando remoto para L2_AtuValvula (DO1)</xhtml></documentation></variable>
+            <variable name="xCmd_Alarme"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Coil[2]: Comando remoto para L3_SinalAlarme (DO2)</xhtml></documentation></variable>
+            <variable name="xCmd_ResetFalha"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Coil[3]: Pulso de rearme (borda de subida; valido se DI3=1 e DI2=0)</xhtml></documentation></variable>
+            <variable name="xCmd_HabRemoto"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Coil[4]: 1 = habilita modo automatico supervisionado</xhtml></documentation></variable>
+            <!-- 4. Input Registers - Modbus FC04 (0..7) -->
+            <variable name="uiCnt_Presenca"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[0]: Contador modular 16 bits de B1 (0..65535)</xhtml></documentation></variable>
+            <variable name="uiCnt_NivelAlto"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[1]: Contador modular 16 bits de B2 (0..65535)</xhtml></documentation></variable>
+            <variable name="uiCnt_Sobretemp"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[2]: Contador modular 16 bits de B3 (0..65535)</xhtml></documentation></variable>
+            <variable name="uiCnt_Emergencia"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[3]: Contador modular 16 bits de eventos em B4 (0..65535)</xhtml></documentation></variable>
+            <variable name="uiEstado_CLP"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[4]: 0=INIT, 1=NORMAL_AUTO, 2=ALERTA, 3=MODO_DEGRADADO, 4=EMERGENCIA_TRAV</xhtml></documentation></variable>
+            <variable name="wMascara_DO_Real"><type><WORD /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[5]: Bitmask das saidas fisicas (bit0=DO0..bit3=DO3)</xhtml></documentation></variable>
+            <variable name="uiEcho_Heartbeat"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[6]: Eco do ultimo valor de heartbeat recebido</xhtml></documentation></variable>
+            <variable name="uiCod_Intertrav"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[7]: 0=Nenhum, 1=Emergencia, 2=Sobretemp, 3=Watchdog</xhtml></documentation></variable>
+            <!-- 5. Holding Registers - Modbus FC03/06/16 (0..3) -->
+            <variable name="uiHeartbeat_Sup"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">HR[0]: Heartbeat ciclico 1..65535 (aliases de compatibilidade: uiHeartbeat_NR, uiHeartbeat_N8N)</xhtml></documentation></variable>
+            <variable name="uiTimeout_WD_ms"><type><UINT /></type><initialValue><simpleValue value="5000" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">HR[1]: Timeout do watchdog em ms [2000..30000], padrao 5000</xhtml></documentation></variable>
+            <variable name="uiSeveridade_IA"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">HR[2]: 0=NORMAL, 1=ATENCAO, 2=CRITICO, 3=EMERGENCIA</xhtml></documentation></variable>
+            <variable name="uiVersao_Mapa"><type><UINT /></type><initialValue><simpleValue value="100" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">HR[3]: Versao fixa do contrato Modbus (100 = v1.0)</xhtml></documentation></variable>
+            <addData>
+              <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                <Attributes>
+                  <Attribute Name="qualified_only" Value="" />
+                </Attributes>
+              </data>
+            </addData>
+          </globalVars>
+        </resource>
+      </configuration>
+    </configurations>
+  </instances>
+
+  <addData>
+    <!-- 1. CODESYS V3.5 GVL object creation with {attribute 'qualified_only'} -->
+    <data name="http://www.3s-software.com/plcopenxml/globalvars" handleUnknown="implementation">
+      <globalVars name="GVL_Modbus">
+        <variable name="xRaw_DI0_Presenca" address="%IX0.0"><type><BOOL /></type><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">B1_SensPresenca - Contato NA</xhtml></documentation></variable>
+        <variable name="xRaw_DI1_NivelAlto" address="%IX0.1"><type><BOOL /></type><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">B2_SensNivelAlto - Contato NA</xhtml></documentation></variable>
+        <variable name="xRaw_DI2_Sobretemp" address="%IX0.2"><type><BOOL /></type><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">B3_SensSobretemp - Contato NA</xhtml></documentation></variable>
+        <variable name="xRaw_DI3_Emergencia" address="%IX0.3"><type><BOOL /></type><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">B4_Emergencia - Contato NF fail-safe (FALSE = emerg./fio partido)</xhtml></documentation></variable>
+        <variable name="xDO0_Motor" address="%QX0.0"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">L1_AtuMotor - LED Verde</xhtml></documentation></variable>
+        <variable name="xDO1_Valvula" address="%QX0.1"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">L2_AtuValvula - LED Amarelo</xhtml></documentation></variable>
+        <variable name="xDO2_Alarme" address="%QX0.2"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">L3_SinalAlarme - LED Vermelho</xhtml></documentation></variable>
+        <variable name="xDO3_StatusOper" address="%QX0.3"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">L4_StatusOper - LED Branco</xhtml></documentation></variable>
+        <variable name="xDI_Presenca"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[0]: Estado filtrado (TON 50 ms) de B1_SensPresenca</xhtml></documentation></variable>
+        <variable name="xDI_NivelAlto"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[1]: Estado filtrado (TON 50 ms) de B2_SensNivelAlto</xhtml></documentation></variable>
+        <variable name="xDI_Sobretemp"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[2]: Estado filtrado (TON 50 ms) de B3_SensSobretemp</xhtml></documentation></variable>
+        <variable name="xDI_EmergenciaOK"><type><BOOL /></type><initialValue><simpleValue value="TRUE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[3]: Estado imediato NF de B4_Emergencia (TRUE em repouso; FALSE = emergencia)</xhtml></documentation></variable>
+        <variable name="xFlag_EmergTravada"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[4]: 1 = emergencia travada aguardando rearme seguro</xhtml></documentation></variable>
+        <variable name="xFlag_WatchdogAtivo"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">DI[5]: 1 = heartbeat estagnado &gt; uiTimeout_WD_ms</xhtml></documentation></variable>
+        <variable name="xCmd_Motor"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Coil[0]: Comando remoto para L1_AtuMotor (DO0)</xhtml></documentation></variable>
+        <variable name="xCmd_Valvula"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Coil[1]: Comando remoto para L2_AtuValvula (DO1)</xhtml></documentation></variable>
+        <variable name="xCmd_Alarme"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Coil[2]: Comando remoto para L3_SinalAlarme (DO2)</xhtml></documentation></variable>
+        <variable name="xCmd_ResetFalha"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Coil[3]: Pulso de rearme (borda de subida; valido se DI3=1 e DI2=0)</xhtml></documentation></variable>
+        <variable name="xCmd_HabRemoto"><type><BOOL /></type><initialValue><simpleValue value="FALSE" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">Coil[4]: 1 = habilita modo automatico supervisionado</xhtml></documentation></variable>
+        <variable name="uiCnt_Presenca"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[0]: Contador modular 16 bits de B1 (0..65535)</xhtml></documentation></variable>
+        <variable name="uiCnt_NivelAlto"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[1]: Contador modular 16 bits de B2 (0..65535)</xhtml></documentation></variable>
+        <variable name="uiCnt_Sobretemp"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[2]: Contador modular 16 bits de B3 (0..65535)</xhtml></documentation></variable>
+        <variable name="uiCnt_Emergencia"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[3]: Contador modular 16 bits de eventos em B4 (0..65535)</xhtml></documentation></variable>
+        <variable name="uiEstado_CLP"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[4]: 0=INIT, 1=NORMAL_AUTO, 2=ALERTA, 3=MODO_DEGRADADO, 4=EMERGENCIA_TRAV</xhtml></documentation></variable>
+        <variable name="wMascara_DO_Real"><type><WORD /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[5]: Bitmask das saidas fisicas (bit0=DO0..bit3=DO3)</xhtml></documentation></variable>
+        <variable name="uiEcho_Heartbeat"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[6]: Eco do ultimo valor de heartbeat recebido</xhtml></documentation></variable>
+        <variable name="uiCod_Intertrav"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">IR[7]: 0=Nenhum, 1=Emergencia, 2=Sobretemp, 3=Watchdog</xhtml></documentation></variable>
+        <variable name="uiHeartbeat_Sup"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">HR[0]: Heartbeat ciclico 1..65535 (aliases de compatibilidade: uiHeartbeat_NR, uiHeartbeat_N8N)</xhtml></documentation></variable>
+        <variable name="uiTimeout_WD_ms"><type><UINT /></type><initialValue><simpleValue value="5000" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">HR[1]: Timeout do watchdog em ms [2000..30000], padrao 5000</xhtml></documentation></variable>
+        <variable name="uiSeveridade_IA"><type><UINT /></type><initialValue><simpleValue value="0" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">HR[2]: 0=NORMAL, 1=ATENCAO, 2=CRITICO, 3=EMERGENCIA</xhtml></documentation></variable>
+        <variable name="uiVersao_Mapa"><type><UINT /></type><initialValue><simpleValue value="100" /></initialValue><documentation><xhtml xmlns="http://www.w3.org/1999/xhtml">HR[3]: Versao fixa do contrato Modbus (100 = v1.0)</xhtml></documentation></variable>
+        <addData>
+          <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+            <Attributes>
+              <Attribute Name="qualified_only" Value="" />
+            </Attributes>
+          </data>
+        </addData>
+      </globalVars>
+    </data>
+
+    <!-- 2. CODESYS V3.5 Project Tree folder structure -->
+    <data name="http://www.3s-software.com/plcopenxml/projectstructure" handleUnknown="discard">
+      <ProjectStructure>
+        <Object Name="GVL_Modbus" ObjectId="11111111-1111-4111-8111-111111111101" />
+        <Folder Name="POUs">
+          <Object Name="FB_DebounceCounter" ObjectId="11111111-1111-4111-8111-111111111102" />
+          <Object Name="FB_WatchdogHeartbeat" ObjectId="11111111-1111-4111-8111-111111111103" />
+          <Object Name="FB_SafetyInterlock" ObjectId="11111111-1111-4111-8111-111111111104" />
+          <Object Name="PLC_PRG" ObjectId="11111111-1111-4111-8111-111111111105" />
+        </Folder>
+        <Object Name="MainTask" ObjectId="11111111-1111-4111-8111-111111111106" />
+      </ProjectStructure>
+    </data>
+
+    <!-- 3. Non-breaking ModbusTCP_Server_Device & ETH2 metadata (handleUnknown="discard" avoids missing-device import failure) -->
+    <data name="http://www.weg.net/plc500/modbustcp_mapping" handleUnknown="discard">
+      <ModbusTCPServerConfig adapter="Ethernet_ETH2"
+                             device="ModbusTCP_Server_Device"
+                             ip="192.168.10.10"
+                             subnetMask="255.255.255.0"
+                             engineeringAdapter="Ethernet_ETH1"
+                             engineeringIp="192.168.20.10"
+                             engineeringSubnetMask="255.255.255.0"
+                             port="502"
+                             unitId="1"
+                             maxConnections="4"
+                             socketTimeoutSec="10"
+                             discreteInputs="6"
+                             coils="5"
+                             inputRegisters="8"
+                             holdingRegisters="4"
+                             continuousVariableUpdate="true"
+                             task="MainTask">
+        <RegisterMap>
+          <Entry fc="FC02" address="0" type="DiscreteInput" symbol="GVL_Modbus.xDI_Presenca" />
+          <Entry fc="FC02" address="1" type="DiscreteInput" symbol="GVL_Modbus.xDI_NivelAlto" />
+          <Entry fc="FC02" address="2" type="DiscreteInput" symbol="GVL_Modbus.xDI_Sobretemp" />
+          <Entry fc="FC02" address="3" type="DiscreteInput" symbol="GVL_Modbus.xDI_EmergenciaOK" />
+          <Entry fc="FC02" address="4" type="DiscreteInput" symbol="GVL_Modbus.xFlag_EmergTravada" />
+          <Entry fc="FC02" address="5" type="DiscreteInput" symbol="GVL_Modbus.xFlag_WatchdogAtivo" />
+          <Entry fc="FC01;FC05;FC15" address="0" type="Coil" symbol="GVL_Modbus.xCmd_Motor" />
+          <Entry fc="FC01;FC05;FC15" address="1" type="Coil" symbol="GVL_Modbus.xCmd_Valvula" />
+          <Entry fc="FC01;FC05;FC15" address="2" type="Coil" symbol="GVL_Modbus.xCmd_Alarme" />
+          <Entry fc="FC01;FC05;FC15" address="3" type="Coil" symbol="GVL_Modbus.xCmd_ResetFalha" />
+          <Entry fc="FC01;FC05;FC15" address="4" type="Coil" symbol="GVL_Modbus.xCmd_HabRemoto" />
+          <Entry fc="FC04" address="0" type="InputRegister" symbol="GVL_Modbus.uiCnt_Presenca" />
+          <Entry fc="FC04" address="1" type="InputRegister" symbol="GVL_Modbus.uiCnt_NivelAlto" />
+          <Entry fc="FC04" address="2" type="InputRegister" symbol="GVL_Modbus.uiCnt_Sobretemp" />
+          <Entry fc="FC04" address="3" type="InputRegister" symbol="GVL_Modbus.uiCnt_Emergencia" />
+          <Entry fc="FC04" address="4" type="InputRegister" symbol="GVL_Modbus.uiEstado_CLP" />
+          <Entry fc="FC04" address="5" type="InputRegister" symbol="GVL_Modbus.wMascara_DO_Real" />
+          <Entry fc="FC04" address="6" type="InputRegister" symbol="GVL_Modbus.uiEcho_Heartbeat" />
+          <Entry fc="FC04" address="7" type="InputRegister" symbol="GVL_Modbus.uiCod_Intertrav" />
+          <Entry fc="FC03;FC06;FC16" address="0" type="HoldingRegister" symbol="GVL_Modbus.uiHeartbeat_Sup" alias="uiHeartbeat_NR;uiHeartbeat_N8N" />
+          <Entry fc="FC03;FC06;FC16" address="1" type="HoldingRegister" symbol="GVL_Modbus.uiTimeout_WD_ms" />
+          <Entry fc="FC03;FC06;FC16" address="2" type="HoldingRegister" symbol="GVL_Modbus.uiSeveridade_IA" />
+          <Entry fc="FC03;FC06;FC16" address="3" type="HoldingRegister" symbol="GVL_Modbus.uiVersao_Mapa" />
+        </RegisterMap>
+      </ModbusTCPServerConfig>
+    </data>
+  </addData>
+</project>

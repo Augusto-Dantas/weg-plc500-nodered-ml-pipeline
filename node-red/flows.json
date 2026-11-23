@@ -1,0 +1,2474 @@
+[
+  {
+    "id": "cfg-modbus-plc500",
+    "type": "modbus-client",
+    "name": "PLC500 ETH2 Modbus TCP",
+    "clienttype": "tcp",
+    "bufferCommands": true,
+    "stateLogEnabled": false,
+    "queueLogEnabled": false,
+    "failureLogEnabled": true,
+    "tcpHost": "${PLC_HOST}",
+    "tcpPort": "${PLC_PORT}",
+    "tcpType": "DEFAULT",
+    "serialPort": "/dev/ttyUSB0",
+    "serialType": "RTU-BUFFERD",
+    "serialBaudrate": "9600",
+    "serialDatabits": "8",
+    "serialStopbits": "1",
+    "serialParity": "none",
+    "serialConnectionDelay": "100",
+    "serialAsciiResponseStartDelimiter": "0x3A",
+    "unit_id": "${PLC_UNIT_ID}",
+    "commandDelay": "1",
+    "clientTimeout": "${NR_MODBUS_TIMEOUT_MS}",
+    "reconnectOnTimeout": true,
+    "reconnectTimeout": "${NR_MODBUS_RECONNECT_MS}",
+    "parallelUnitIdsAllowed": false,
+    "showErrors": true,
+    "showWarnings": true,
+    "showLogs": true
+  },
+  {
+    "id": "cfg-pg-plc500",
+    "type": "postgreSQLConfig",
+    "name": "PostgreSQL PLC500",
+    "host": "POSTGRES_HOST",
+    "hostFieldType": "env",
+    "port": "POSTGRES_PORT",
+    "portFieldType": "env",
+    "database": "POSTGRES_DB",
+    "databaseFieldType": "env",
+    "user": "POSTGRES_USER",
+    "userFieldType": "env",
+    "password": "POSTGRES_PASSWORD",
+    "passwordFieldType": "env",
+    "ssl": false,
+    "sslFieldType": "bool",
+    "applicationName": "nodered-plc500",
+    "applicationNameType": "str",
+    "max": "10",
+    "maxFieldType": "num",
+    "idle": "1000",
+    "idleFieldType": "num",
+    "connectionTimeout": "5000",
+    "connectionTimeoutFieldType": "num",
+    "statementTimeout": "10000",
+    "statementTimeoutFieldType": "num",
+    "preparedStatement": false,
+    "rowsPerMsg": 1,
+    "split": false
+  },
+  {
+    "id": "ui-base-plc500",
+    "type": "ui-base",
+    "name": "WEG PLC500 Supervisor",
+    "path": "/dashboard",
+    "appIcon": "",
+    "includeClientData": true,
+    "acceptsClientConfig": [
+      "ui-notification",
+      "ui-control"
+    ],
+    "showPathInSidebar": false,
+    "navigationStyle": "default",
+    "titleBarStyle": "default"
+  },
+  {
+    "id": "ui-theme-plc500",
+    "type": "ui-theme",
+    "name": "Industrial Light",
+    "colors": {
+      "surface": "#ffffff",
+      "primary": "#005792",
+      "bgPage": "#f4f6f8",
+      "groupBg": "#ffffff",
+      "groupOutline": "#d9e2ec"
+    },
+    "sizes": {
+      "density": "default",
+      "pagePadding": "12px",
+      "groupGap": "12px",
+      "groupBorderRadius": "6px",
+      "widgetGap": "10px"
+    }
+  },
+  {
+    "id": "ui-page-operacao",
+    "type": "ui-page",
+    "name": "Supervisão PLC500",
+    "ui": "ui-base-plc500",
+    "path": "/operacao",
+    "icon": "mdi-factory",
+    "layout": "grid",
+    "theme": "ui-theme-plc500",
+    "breakpoints": [
+      {
+        "name": "Default",
+        "px": "0",
+        "cols": "3"
+      },
+      {
+        "name": "Tablet",
+        "px": "576",
+        "cols": "6"
+      },
+      {
+        "name": "Small Desktop",
+        "px": "768",
+        "cols": "9"
+      },
+      {
+        "name": "Desktop",
+        "px": "1024",
+        "cols": "12"
+      }
+    ],
+    "order": 1,
+    "className": "",
+    "visible": true,
+    "disabled": false
+  },
+  {
+    "id": "ui-grp-io",
+    "type": "ui-group",
+    "name": "Sinais 24 Vcc (DI0..DI3 / DO0..DO3)",
+    "page": "ui-page-operacao",
+    "width": "6",
+    "height": "1",
+    "order": 1,
+    "showTitle": true,
+    "className": "",
+    "visible": true,
+    "disabled": false
+  },
+  {
+    "id": "ui-grp-fsm",
+    "type": "ui-group",
+    "name": "Estado FSM & Intertravamento",
+    "page": "ui-page-operacao",
+    "width": "6",
+    "height": "1",
+    "order": 2,
+    "showTitle": true,
+    "className": "",
+    "visible": true,
+    "disabled": false
+  },
+  {
+    "id": "ui-grp-metrics",
+    "type": "ui-group",
+    "name": "Métricas W=60 s, ML & Diagnóstico",
+    "page": "ui-page-operacao",
+    "width": "8",
+    "height": "1",
+    "order": 3,
+    "showTitle": true,
+    "className": "",
+    "visible": true,
+    "disabled": false
+  },
+  {
+    "id": "ui-grp-controls",
+    "type": "ui-group",
+    "name": "Controles Remotos & Relatório",
+    "page": "ui-page-operacao",
+    "width": "4",
+    "height": "1",
+    "order": 4,
+    "showTitle": true,
+    "className": "",
+    "visible": true,
+    "disabled": false
+  },
+  {
+    "id": "tab-aquisicao",
+    "type": "tab",
+    "label": "Aquisição Modbus TCP (500 ms)",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "tab-analise",
+    "type": "tab",
+    "label": "Análise Híbrida (60 s + ML + LLM)",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "tab-atuacao",
+    "type": "tab",
+    "label": "Atuação, Auditoria & Relatórios",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "tab-dashboard",
+    "type": "tab",
+    "label": "Dashboard Operacional",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "tab-testes",
+    "type": "tab",
+    "label": "Utilitários de Teste & Simulador",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "t1-inject-500ms",
+    "type": "inject",
+    "z": "tab-aquisicao",
+    "name": "Polling 500 ms (2 Hz)",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "0.5",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "2",
+    "topic": "poll_500ms",
+    "payload": "",
+    "payloadType": "date",
+    "x": 140,
+    "y": 140,
+    "wires": [
+      [
+        "t1-fn-req-fc02"
+      ]
+    ]
+  },
+  {
+    "id": "t1-fn-req-fc02",
+    "type": "function",
+    "z": "tab-aquisicao",
+    "name": "Preparar FC02 (DI 0..5)",
+    "func": "const cfg = global.get(\"plcConfig\") || {};\nmsg._pollStartMs = Date.now();\nmsg.payload = {\n    fc: 2,\n    unitid: Number(cfg.unitId || 1),\n    address: 0,\n    quantity: 6\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 140,
+    "wires": [
+      [
+        "t1-mb-read-fc02"
+      ]
+    ]
+  },
+  {
+    "id": "t1-mb-read-fc02",
+    "type": "modbus-flex-getter",
+    "z": "tab-aquisicao",
+    "name": "Modbus FC02 DI 0..5",
+    "showStatusActivities": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "logIOActivities": false,
+    "server": "cfg-modbus-plc500",
+    "useIOFile": false,
+    "ioFile": "",
+    "useIOForPayload": false,
+    "emptyMsgOnFail": false,
+    "keepMsgProperties": true,
+    "delayOnStart": false,
+    "startDelayTime": "",
+    "x": 590,
+    "y": 140,
+    "wires": [
+      [
+        "t1-fn-req-fc04"
+      ],
+      []
+    ]
+  },
+  {
+    "id": "t1-fn-req-fc04",
+    "type": "function",
+    "z": "tab-aquisicao",
+    "name": "Preparar FC04 (IR 0..7)",
+    "func": "const cfg = global.get(\"plcConfig\") || {};\nmsg._di = Array.isArray(msg.payload) ? msg.payload.slice(0, 6) : [];\nmsg.payload = {\n    fc: 4,\n    unitid: Number(cfg.unitId || 1),\n    address: 0,\n    quantity: 8\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 820,
+    "y": 140,
+    "wires": [
+      [
+        "t1-mb-read-fc04"
+      ]
+    ]
+  },
+  {
+    "id": "t1-mb-read-fc04",
+    "type": "modbus-flex-getter",
+    "z": "tab-aquisicao",
+    "name": "Modbus FC04 IR 0..7",
+    "showStatusActivities": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "logIOActivities": false,
+    "server": "cfg-modbus-plc500",
+    "useIOFile": false,
+    "ioFile": "",
+    "useIOForPayload": false,
+    "emptyMsgOnFail": false,
+    "keepMsgProperties": true,
+    "delayOnStart": false,
+    "startDelayTime": "",
+    "x": 1050,
+    "y": 140,
+    "wires": [
+      [
+        "t1-fn-process-telemetry"
+      ],
+      []
+    ]
+  },
+  {
+    "id": "t1-fn-process-telemetry",
+    "type": "function",
+    "z": "tab-aquisicao",
+    "name": "Estruturar Telemetria + Heartbeat",
+    "func": "const di = Array.isArray(msg._di) ? msg._di : [];\nconst ir = Array.isArray(msg.payload) ? msg.payload : [];\nif (di.length < 6 || ir.length < 8) {\n    node.warn(\"Leitura Modbus incompleta: DI=\" + di.length + \" IR=\" + ir.length);\n    return [null, null, null, null];\n}\n\nconst cfg = global.get(\"plcConfig\") || {};\nconst unitId = Number(cfg.unitId || 1);\nconst nowIso = new Date().toISOString();\nconst rttMs = Math.max(0, Date.now() - (msg._pollStartMs || Date.now()));\n\nconst tel = {\n    capturado_em: nowIso,\n    di_presenca: Boolean(di[0]),\n    di_nivel_alto: Boolean(di[1]),\n    di_sobretemp: Boolean(di[2]),\n    di_emergencia_ok: Boolean(di[3]),\n    flag_emerg_travada: Boolean(di[4]),\n    flag_watchdog: Boolean(di[5]),\n    cnt_presenca: Number(ir[0]) & 0xFFFF,\n    cnt_nivel_alto: Number(ir[1]) & 0xFFFF,\n    cnt_sobretemp: Number(ir[2]) & 0xFFFF,\n    cnt_emergencia: Number(ir[3]) & 0xFFFF,\n    estado_clp: Number(ir[4]),\n    mascara_do_real: Number(ir[5]) & 0x0F,\n    echo_heartbeat: Number(ir[6]) & 0xFFFF,\n    cod_intertrav: Number(ir[7]),\n    rtt_ms: rttMs\n};\n\nconst prevTel = global.get(\"plc_latest_telemetry\") || null;\nglobal.set(\"plc_latest_telemetry\", tel);\n\n// Out 1: PostgreSQL insert into telemetria_sensores\nconst pgMsg = {\n    query: `INSERT INTO telemetria_sensores (\n        capturado_em, di_presenca, di_nivel_alto, di_sobretemp, di_emergencia_ok,\n        flag_emerg_travada, flag_watchdog, cnt_presenca, cnt_nivel_alto, cnt_sobretemp,\n        cnt_emergencia, estado_clp, mascara_do_real, cod_intertrav\n    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14);`,\n    params: [\n        tel.capturado_em,\n        tel.di_presenca,\n        tel.di_nivel_alto,\n        tel.di_sobretemp,\n        tel.di_emergencia_ok,\n        tel.flag_emerg_travada,\n        tel.flag_watchdog,\n        tel.cnt_presenca,\n        tel.cnt_nivel_alto,\n        tel.cnt_sobretemp,\n        tel.cnt_emergencia,\n        tel.estado_clp,\n        tel.mascara_do_real,\n        tel.cod_intertrav\n    ],\n    payload: tel\n};\n\n// Out 2: FC06 HR[0] cyclic heartbeat (1..65535), pausable for CT-09 watchdog test\nlet hbMsg = null;\nif (global.get(\"pause_heartbeat\") !== true) {\n    let hb = Number(flow.get(\"uiHeartbeat_NR\") || 0) + 1;\n    if (hb > 65535 || hb < 1) hb = 1;\n    flow.set(\"uiHeartbeat_NR\", hb);\n    hbMsg = {\n        payload: {\n            fc: 6,\n            unitid: unitId,\n            address: 0,\n            quantity: 1,\n            value: hb\n        }\n    };\n}\n\n// Out 3: Live Dashboard stream\nconst dashMsg = { payload: tel, topic: \"telemetria\" };\n\n// Out 4: Immediate rising-edge fault trigger to Tab 2\nconst currFault = tel.flag_emerg_travada || !tel.di_emergencia_ok || tel.di_sobretemp || tel.flag_watchdog;\nconst prevFault = prevTel\n    ? (prevTel.flag_emerg_travada || !prevTel.di_emergencia_ok || prevTel.di_sobretemp || prevTel.flag_watchdog)\n    : false;\nconst faultMsg = (currFault && !prevFault)\n    ? { payload: { trigger: \"fault_edge\", tel }, topic: \"fault_edge\" }\n    : null;\n\nreturn [pgMsg, hbMsg, dashMsg, faultMsg];",
+    "outputs": 4,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 280,
+    "wires": [
+      [
+        "t1-pg-insert-tel"
+      ],
+      [
+        "t1-mb-write-hb"
+      ],
+      [
+        "t1-link-out-dash"
+      ],
+      [
+        "t1-link-out-fault"
+      ]
+    ]
+  },
+  {
+    "id": "t1-pg-insert-tel",
+    "type": "postgresql",
+    "z": "tab-aquisicao",
+    "name": "PG INSERT telemetria_sensores",
+    "query": "",
+    "postgreSQLConfig": "cfg-pg-plc500",
+    "split": false,
+    "rowsPerMsg": 1,
+    "outputs": 1,
+    "x": 700,
+    "y": 220,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "t1-mb-write-hb",
+    "type": "modbus-flex-write",
+    "z": "tab-aquisicao",
+    "name": "Modbus FC06 HR[0] Heartbeat",
+    "showStatusActivities": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "server": "cfg-modbus-plc500",
+    "emptyMsgOnFail": false,
+    "keepMsgProperties": false,
+    "delayOnStart": false,
+    "startDelayTime": "",
+    "x": 700,
+    "y": 280,
+    "wires": [
+      [],
+      []
+    ]
+  },
+  {
+    "id": "t1-link-out-dash",
+    "type": "link out",
+    "z": "tab-aquisicao",
+    "name": "-> Dashboard Telemetria",
+    "mode": "link",
+    "links": [
+      "t4-link-in-tel"
+    ],
+    "x": 670,
+    "y": 340,
+    "wires": []
+  },
+  {
+    "id": "t1-link-out-fault",
+    "type": "link out",
+    "z": "tab-aquisicao",
+    "name": "-> Borda Falha Crítica",
+    "mode": "link",
+    "links": [
+      "t2-link-in-fault"
+    ],
+    "x": 670,
+    "y": 400,
+    "wires": []
+  },
+  {
+    "id": "t1-catch",
+    "type": "catch",
+    "z": "tab-aquisicao",
+    "name": "Erros Aquisição",
+    "scope": null,
+    "uncaught": false,
+    "x": 140,
+    "y": 420,
+    "wires": [
+      [
+        "t1-dbg-err"
+      ]
+    ]
+  },
+  {
+    "id": "t1-dbg-err",
+    "type": "debug",
+    "z": "tab-aquisicao",
+    "name": "Log Erro Tab 1",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": true,
+    "complete": "error",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 360,
+    "y": 420,
+    "wires": []
+  },
+  {
+    "id": "t2-inject-60s",
+    "type": "inject",
+    "z": "tab-analise",
+    "name": "Janela Deslizante 60 s",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "60",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "15",
+    "topic": "window_60s",
+    "payload": "",
+    "payloadType": "date",
+    "x": 140,
+    "y": 100,
+    "wires": [
+      [
+        "t2-fn-prep-query"
+      ]
+    ]
+  },
+  {
+    "id": "t2-inject-hourly",
+    "type": "inject",
+    "z": "tab-analise",
+    "name": "Sumário Horário (3600 s)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "3600",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 150,
+    "y": 40,
+    "wires": [
+      [
+        "t2-fn-hourly-flag"
+      ]
+    ]
+  },
+  {
+    "id": "t2-fn-hourly-flag",
+    "type": "function",
+    "z": "tab-analise",
+    "name": "Marcar Sumário Horário",
+    "func": "flow.set(\"ciclo_sumario_horario\", true);\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 40,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "t2-link-in-fault",
+    "type": "link in",
+    "z": "tab-analise",
+    "name": "<- Borda Falha Tab 1",
+    "links": [
+      "t1-link-out-fault"
+    ],
+    "x": 95,
+    "y": 160,
+    "wires": [
+      [
+        "t2-fn-prep-query"
+      ]
+    ]
+  },
+  {
+    "id": "t2-link-in-test",
+    "type": "link in",
+    "z": "tab-analise",
+    "name": "<- Gatilho Teste Tab 5",
+    "links": [
+      "t5-link-out-analysis"
+    ],
+    "x": 95,
+    "y": 220,
+    "wires": [
+      [
+        "t2-fn-prep-query"
+      ]
+    ]
+  },
+  {
+    "id": "t2-fn-prep-query",
+    "type": "function",
+    "z": "tab-analise",
+    "name": "Preparar Consulta 60 s + vw_baseline_24h",
+    "func": "msg.query = `SELECT t.*,\n       COALESCE(b.baseline_mu_presenca, 12.0) AS baseline_mu_presenca,\n       COALESCE(b.baseline_sigma_presenca, 2.5) AS baseline_sigma_presenca\nFROM telemetria_sensores t\nLEFT JOIN vw_baseline_24h b ON TRUE\nWHERE t.capturado_em >= NOW() - INTERVAL '60 seconds'\nORDER BY t.capturado_em ASC;`;\nmsg.params = [];\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 140,
+    "wires": [
+      [
+        "t2-pg-query-window"
+      ]
+    ]
+  },
+  {
+    "id": "t2-pg-query-window",
+    "type": "postgresql",
+    "z": "tab-analise",
+    "name": "PG SELECT Janela 60 s",
+    "query": "SELECT t.*,\n       COALESCE(b.baseline_mu_presenca, 12.0) AS baseline_mu_presenca,\n       COALESCE(b.baseline_sigma_presenca, 2.5) AS baseline_sigma_presenca\nFROM telemetria_sensores t\nLEFT JOIN vw_baseline_24h b ON TRUE\nWHERE t.capturado_em >= NOW() - INTERVAL '60 seconds'\nORDER BY t.capturado_em ASC;",
+    "postgreSQLConfig": "cfg-pg-plc500",
+    "split": false,
+    "rowsPerMsg": 1,
+    "outputs": 1,
+    "x": 700,
+    "y": 140,
+    "wires": [
+      [
+        "t2-fn-analyze-window"
+      ]
+    ]
+  },
+  {
+    "id": "t2-fn-analyze-window",
+    "type": "function",
+    "z": "tab-analise",
+    "name": "Análise Estatística W=60s",
+    "func": "const amostras = Array.isArray(msg.payload) ? msg.payload : [];\nif (amostras.length === 0) {\n    msg.payload = { status: \"SEM_DADOS\", acionar_llm: false };\n    return [null, msg];\n}\n\nconst cfg = global.get(\"plcConfig\") || {};\nconst W_SEG = Number(cfg.windowSeconds) || 60;\nconst EPS = Number(cfg.zscoreEps) || 0.01;\nconst inicio = amostras[0];\nconst fim = amostras[amostras.length - 1];\nconst K = amostras.length;\n\nconst deltaMod16 = (atual, anterior) => (Number(atual) - Number(anterior) + 65536) % 65536;\n\nconst nPresenca = deltaMod16(fim.cnt_presenca ?? 0, inicio.cnt_presenca ?? 0);\nconst taxaPres = (nPresenca / W_SEG) * 60;\nconst dutyNivel = amostras.reduce((acc, s) => acc + (s.di_nivel_alto ? 1 : 0), 0) / K;\nconst dutyTemp = amostras.reduce((acc, s) => acc + (s.di_sobretemp ? 1 : 0), 0) / K;\nconst emergAtiva = Boolean(fim.flag_emerg_travada) || !Boolean(fim.di_emergencia_ok);\nconst flagWatchdog = Boolean(fim.flag_watchdog);\n\nconst baseCtx = flow.get(\"baseline_presenca\") || {\n    mu: Number(cfg.baselineMu) || 12.0,\n    sigma: Number(cfg.baselineSigma) || 2.5\n};\nconst rawMu = Number(fim.baseline_mu_presenca);\nconst rawSigma = Number(fim.baseline_sigma_presenca);\nconst muPres = Number.isFinite(rawMu) && rawMu > 0 ? rawMu : baseCtx.mu;\nconst sigmaPres = Number.isFinite(rawSigma) && rawSigma > 0 ? rawSigma : baseCtx.sigma;\nconst zPresenca = (taxaPres - muPres) / (sigmaPres + EPS);\n\nlet transitions = 0;\nlet multiPulses = 0;\nif (K >= 2) {\n    for (let i = 1; i < K; i++) {\n        if (Boolean(amostras[i].di_presenca) !== Boolean(amostras[i - 1].di_presenca)) {\n            transitions += 1;\n        }\n        if (deltaMod16(amostras[i].cnt_presenca ?? 0, amostras[i - 1].cnt_presenca ?? 0) >= 2) {\n            multiPulses += 1;\n        }\n    }\n}\nconst transitionDensity = K >= 2 ? transitions / (K - 1) : 0.0;\nconst multiPulseRatio = K >= 2 ? multiPulses / (K - 1) : 0.0;\nconst rateExcess = Math.min(1.0, Math.max(0.0, taxaPres - muPres) / (4.0 * Math.max(sigmaPres, 0.5)));\nconst chatteringIndex = Number(\n    Math.min(1.0, 0.5 * Math.max(transitionDensity, multiPulseRatio) + 0.5 * Math.max(multiPulseRatio, rateExcess)).toFixed(4)\n);\n\nlet severidade = 0;\nlet fallbackCmd = { cmd_motor: true, cmd_valvula: false, cmd_alarme: false };\n\nif (emergAtiva) {\n    severidade = 3;\n    fallbackCmd = { cmd_motor: false, cmd_valvula: false, cmd_alarme: true };\n} else if (dutyTemp > 0 || dutyNivel >= 0.30 || Math.abs(zPresenca) >= 3.0 || flagWatchdog) {\n    severidade = 2;\n    fallbackCmd = { cmd_motor: false, cmd_valvula: true, cmd_alarme: true };\n} else if (dutyNivel > 0 || Math.abs(zPresenca) >= 2.0) {\n    severidade = 1;\n    fallbackCmd = { cmd_motor: true, cmd_valvula: true, cmd_alarme: false };\n}\n\nconst analise = {\n    janela_inicio: inicio.capturado_em || new Date(Date.now() - W_SEG * 1000).toISOString(),\n    janela_fim: fim.capturado_em || new Date().toISOString(),\n    amostras_k: K,\n    taxa_presenca_min: Number(taxaPres.toFixed(2)),\n    duty_nivel: Number(dutyNivel.toFixed(3)),\n    duty_sobretemp: Number(dutyTemp.toFixed(3)),\n    zscore_presenca: Number(zPresenca.toFixed(2)),\n    chattering_index: chatteringIndex,\n    baseline_mu: muPres,\n    baseline_sigma: sigmaPres,\n    di_emergencia_ok: Boolean(fim.di_emergencia_ok),\n    flag_emerg_travada: Boolean(fim.flag_emerg_travada),\n    flag_watchdog: flagWatchdog,\n    di_sobretemp: Boolean(fim.di_sobretemp),\n    di_nivel_alto: Boolean(fim.di_nivel_alto),\n    emerg_ativa: emergAtiva,\n    estado_clp: Number(fim.estado_clp ?? 1),\n    cod_intertravamento: Number(fim.cod_intertrav ?? 0),\n    severidade_estatistica: severidade,\n    fallback_comandos: fallbackCmd,\n    acionar_llm: severidade >= 1 || flow.get(\"ciclo_sumario_horario\") === true\n};\n\nmsg.analise = analise;\nmsg.payload = analise;\nreturn [msg, null];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 980,
+    "y": 140,
+    "wires": [
+      [
+        "t2-fn-prep-ml"
+      ],
+      [
+        "t2-dbg-sem-dados"
+      ]
+    ]
+  },
+  {
+    "id": "t2-dbg-sem-dados",
+    "type": "debug",
+    "z": "tab-analise",
+    "name": "Log SEM_DADOS",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": true,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1220,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "t2-fn-prep-ml",
+    "type": "function",
+    "z": "tab-analise",
+    "name": "Preparar Chamada ML FastAPI",
+    "func": "const cfg = global.get(\"plcConfig\") || {};\nconst mlUrl = (cfg.mlApiUrl || \"http://ml-api:8000\").replace(/\\/$/, \"\");\nconst a = msg.analise || msg.payload;\nmsg.url = mlUrl + \"/predict\";\nmsg.method = \"POST\";\nmsg.headers = { \"Content-Type\": \"application/json\" };\nmsg.payload = {\n    taxa_presenca_min: a.taxa_presenca_min,\n    duty_nivel: a.duty_nivel,\n    duty_sobretemp: a.duty_sobretemp,\n    zscore_presenca: a.zscore_presenca,\n    chattering_index: a.chattering_index,\n    amostras_k: a.amostras_k,\n    di_emergencia_ok: a.di_emergencia_ok,\n    flag_emerg_travada: a.flag_emerg_travada,\n    flag_watchdog: a.flag_watchdog,\n    di_sobretemp: a.di_sobretemp,\n    di_nivel_alto: a.di_nivel_alto,\n    estado_clp: a.estado_clp,\n    cod_intertrav: a.cod_intertravamento,\n    baseline_mu: a.baseline_mu,\n    baseline_sigma: a.baseline_sigma\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 220,
+    "y": 280,
+    "wires": [
+      [
+        "t2-http-ml"
+      ]
+    ]
+  },
+  {
+    "id": "t2-http-ml",
+    "type": "http request",
+    "z": "tab-analise",
+    "name": "POST /predict (ML FastAPI)",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "timeout": "2500",
+    "x": 490,
+    "y": 280,
+    "wires": [
+      [
+        "t2-fn-merge-ml"
+      ]
+    ]
+  },
+  {
+    "id": "t2-catch-ml",
+    "type": "catch",
+    "z": "tab-analise",
+    "name": "Catch ML HTTP",
+    "scope": [
+      "t2-http-ml"
+    ],
+    "uncaught": false,
+    "x": 480,
+    "y": 220,
+    "wires": [
+      [
+        "t2-fn-catch-ml"
+      ]
+    ]
+  },
+  {
+    "id": "t2-fn-catch-ml",
+    "type": "function",
+    "z": "tab-analise",
+    "name": "Degradar ML com Segurança",
+    "func": "msg._mlError = true;\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 700,
+    "y": 220,
+    "wires": [
+      [
+        "t2-fn-merge-ml"
+      ]
+    ]
+  },
+  {
+    "id": "t2-fn-merge-ml",
+    "type": "function",
+    "z": "tab-analise",
+    "name": "Integrar ML + INSERT janelas_analiticas",
+    "func": "const a = msg.analise;\nconst ok = !msg._mlError && (!msg.statusCode || msg.statusCode === 200) && msg.payload && typeof msg.payload === \"object\";\nif (ok) {\n    const r = msg.payload;\n    const diag = r.diagnostico || r.diagnostico_atuacao || null;\n    a.ml_available = true;\n    a.ml_result = {\n        diagnostico: diag,\n        ml_severity: r.severidade_ml ?? r.ml_metadata?.ml_severity ?? r.severidade_codigo ?? null,\n        anomaly_score: r.anomaly_score ?? r.ml_metadata?.anomaly_score ?? null,\n        is_anomaly: Boolean(r.is_anomaly ?? r.ml_metadata?.is_anomaly ?? false),\n        ml_confidence: r.ml_confidence ?? r.ml_metadata?.ml_confidence ?? null,\n        model_version: r.model_version ?? r.ml_metadata?.model_version ?? \"1.0.0\",\n        origem_decisao: r.origem_decisao ?? r.ml_metadata?.origem_decisao ?? \"ML_FASTAPI\"\n    };\n} else {\n    a.ml_available = false;\n    a.ml_result = null;\n}\n\nconst ml = a.ml_result || {};\nmsg.query = `INSERT INTO janelas_analiticas (\n    janela_inicio, janela_fim, amostras_k, taxa_presenca_min, duty_nivel,\n    duty_sobretemp, zscore_presenca, severidade_estatistica, chattering_index,\n    anomaly_score, is_anomaly, ml_severity, ml_confidence, model_version\n) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id;`;\nmsg.params = [\n    a.janela_inicio,\n    a.janela_fim,\n    a.amostras_k,\n    a.taxa_presenca_min,\n    a.duty_nivel,\n    a.duty_sobretemp,\n    a.zscore_presenca,\n    a.severidade_estatistica,\n    a.chattering_index,\n    ml.anomaly_score ?? null,\n    Boolean(ml.is_anomaly ?? false),\n    ml.ml_severity ?? null,\n    ml.ml_confidence ?? null,\n    ml.model_version ?? null\n];\nmsg.payload = a;\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 790,
+    "y": 280,
+    "wires": [
+      [
+        "t2-pg-insert-janela"
+      ]
+    ]
+  },
+  {
+    "id": "t2-pg-insert-janela",
+    "type": "postgresql",
+    "z": "tab-analise",
+    "name": "PG INSERT janelas_analiticas",
+    "query": "",
+    "postgreSQLConfig": "cfg-pg-plc500",
+    "split": false,
+    "rowsPerMsg": 1,
+    "outputs": 1,
+    "x": 1080,
+    "y": 280,
+    "wires": [
+      [
+        "t2-fn-after-janela"
+      ]
+    ]
+  },
+  {
+    "id": "t2-fn-after-janela",
+    "type": "function",
+    "z": "tab-analise",
+    "name": "Capturar janela_id",
+    "func": "if (Array.isArray(msg.payload) && msg.payload.length > 0 && msg.payload[0].id !== undefined) {\n    msg.analise.janela_id = Number(msg.payload[0].id);\n} else {\n    msg.analise.janela_id = msg.analise.janela_id ?? null;\n}\nmsg.payload = msg.analise;\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 190,
+    "y": 400,
+    "wires": [
+      [
+        "t2-switch-llm"
+      ]
+    ]
+  },
+  {
+    "id": "t2-switch-llm",
+    "type": "switch",
+    "z": "tab-analise",
+    "name": "Acionar LLM?",
+    "property": "analise.acionar_llm",
+    "propertyType": "msg",
+    "rules": [
+      {
+        "t": "true"
+      },
+      {
+        "t": "else"
+      }
+    ],
+    "checkall": "false",
+    "repair": false,
+    "outputs": 2,
+    "x": 400,
+    "y": 400,
+    "wires": [
+      [
+        "t2-fn-prep-llm"
+      ],
+      [
+        "t2-fn-nominal-diag"
+      ]
+    ]
+  },
+  {
+    "id": "t2-fn-prep-llm",
+    "type": "function",
+    "z": "tab-analise",
+    "name": "Ramo Cognitivo LLM / ML / Teste",
+    "func": "const a = msg.analise;\nconst cfg = global.get(\"plcConfig\") || {};\nconst provider = (cfg.llmProvider || \"none\").toLowerCase();\n\nif (msg._injectTimeout) {\n    msg.diagnostico_origem = \"FALLBACK_STATS\";\n    msg._forceFallbackReason = \"Timeout simulado na chamada LLM (CT-06).\";\n    return [null, msg];\n}\nif (msg._injectMalformedJson) {\n    msg.diagnostico_origem = \"LLM\";\n    msg.payload = \"{malformed_json: true, severidade: INVALID\";\n    return [null, msg];\n}\nif (msg._mockLlmResponse) {\n    msg.diagnostico_origem = \"LLM\";\n    msg.payload = msg._mockLlmResponse;\n    return [null, msg];\n}\n\nconst systemPrompt = \"Voce eh um engenheiro de confiabilidade OT/IIoT para o CLP WEG PLC500. \" +\n    \"Responda EXCLUSIVAMENTE com um JSON valido aderente ao schema DiagnosticoAtuacaoPLC500 \" +\n    \"(chaves: severidade, diagnostico, causa_provavel, comandos_atuadores{cmd_motor,cmd_valvula,cmd_alarme}, requer_relatorio, resumo_executivo).\";\n\nconst userPrompt = \"Analise a janela de 60s do PLC500: \" + JSON.stringify({\n    taxa_presenca_min: a.taxa_presenca_min,\n    zscore_presenca: a.zscore_presenca,\n    duty_nivel: a.duty_nivel,\n    duty_sobretemp: a.duty_sobretemp,\n    chattering_index: a.chattering_index,\n    emerg_ativa: a.emerg_ativa,\n    di_sobretemp: a.di_sobretemp,\n    flag_watchdog: a.flag_watchdog,\n    severidade_estatistica: a.severidade_estatistica,\n    ml_result: a.ml_result\n});\n\nif (provider === \"openai\" && cfg.openaiApiKey) {\n    const base = (cfg.openaiBaseUrl || \"https://api.openai.com/v1\").replace(/\\/$/, \"\");\n    msg.url = base + \"/chat/completions\";\n    msg.method = \"POST\";\n    msg.headers = {\n        \"Content-Type\": \"application/json\",\n        \"Authorization\": \"Bearer \" + cfg.openaiApiKey\n    };\n    msg.payload = {\n        model: cfg.openaiModel || \"gpt-4o-mini\",\n        temperature: 0.1,\n        response_format: { type: \"json_object\" },\n        messages: [\n            { role: \"system\", content: systemPrompt },\n            { role: \"user\", content: userPrompt }\n        ]\n    };\n    return [msg, null];\n}\n\nif (provider === \"ollama\") {\n    const base = (cfg.ollamaBaseUrl || \"http://host.docker.internal:11434\").replace(/\\/$/, \"\");\n    msg.url = base + \"/api/chat\";\n    msg.method = \"POST\";\n    msg.headers = { \"Content-Type\": \"application/json\" };\n    msg.payload = {\n        model: cfg.ollamaModel || \"llama3.1:8b\",\n        stream: false,\n        format: \"json\",\n        messages: [\n            { role: \"system\", content: systemPrompt },\n            { role: \"user\", content: userPrompt }\n        ]\n    };\n    return [msg, null];\n}\n\n// LLM_PROVIDER=none: synthesize schema-valid payload from FastAPI ML or deterministic stats\nif (a.ml_available && a.ml_result && a.ml_result.diagnostico) {\n    msg.diagnostico_origem = a.ml_result.origem_decisao || \"ML_FASTAPI\";\n    msg.payload = a.ml_result.diagnostico;\n    return [null, msg];\n}\n\nmsg.diagnostico_origem = \"FALLBACK_STATS\";\nmsg._forceFallbackReason = \"LLM desabilitado (LLM_PROVIDER=none) e ML indisponivel.\";\nreturn [null, msg];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 640,
+    "y": 360,
+    "wires": [
+      [
+        "t2-http-llm"
+      ],
+      [
+        "t2-fn-validate-schema"
+      ]
+    ]
+  },
+  {
+    "id": "t2-http-llm",
+    "type": "http request",
+    "z": "tab-analise",
+    "name": "LLM API (OpenAI / Ollama)",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "timeout": "8000",
+    "x": 920,
+    "y": 340,
+    "wires": [
+      [
+        "t2-fn-extract-llm"
+      ]
+    ]
+  },
+  {
+    "id": "t2-fn-extract-llm",
+    "type": "function",
+    "z": "tab-analise",
+    "name": "Extrair JSON LLM",
+    "func": "if (msg.statusCode && msg.statusCode >= 400) {\n    msg._forceFallbackReason = \"Erro HTTP LLM status \" + msg.statusCode;\n    return msg;\n}\nconst body = msg.payload;\nlet content = body;\nif (body && typeof body === \"object\") {\n    if (Array.isArray(body.choices) && body.choices[0]?.message?.content) {\n        content = body.choices[0].message.content;\n    } else if (body.message?.content) {\n        content = body.message.content;\n    } else if (typeof body.response === \"string\") {\n        content = body.response;\n    }\n}\nmsg.diagnostico_origem = \"LLM\";\nmsg.payload = content;\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1150,
+    "y": 340,
+    "wires": [
+      [
+        "t2-fn-validate-schema"
+      ]
+    ]
+  },
+  {
+    "id": "t2-catch-llm",
+    "type": "catch",
+    "z": "tab-analise",
+    "name": "Catch Timeout/Erro LLM",
+    "scope": [
+      "t2-http-llm"
+    ],
+    "uncaught": false,
+    "x": 920,
+    "y": 400,
+    "wires": [
+      [
+        "t2-fn-fallback-stats"
+      ]
+    ]
+  },
+  {
+    "id": "t2-fn-nominal-diag",
+    "type": "function",
+    "z": "tab-analise",
+    "name": "Diagnóstico Nominal",
+    "func": "const a = msg.analise;\nconst ml = a.ml_result;\nif (a.ml_available && ml && ml.diagnostico) {\n    msg.diagnostico_origem = ml.origem_decisao || \"ML_FASTAPI\";\n    msg.payload = ml.diagnostico;\n} else {\n    msg.diagnostico_origem = \"FALLBACK_STATS\";\n    msg.payload = {\n        severidade: \"NORMAL\",\n        diagnostico: \"Operacao nominal da bancada PLC500 na janela de 60 segundos.\",\n        causa_provavel: \"Parametros dentro dos limites operacionais e baseline 24h.\",\n        comandos_atuadores: { cmd_motor: true, cmd_valvula: false, cmd_alarme: false },\n        requer_relatorio: false,\n        resumo_executivo: \"Janela nominal sem desvios estatisticos, intertravamentos locais ou anomalias detectadas.\"\n    };\n}\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 640,
+    "y": 440,
+    "wires": [
+      [
+        "t2-fn-validate-schema"
+      ]
+    ]
+  },
+  {
+    "id": "t2-link-in-validator",
+    "type": "link in",
+    "z": "tab-analise",
+    "name": "<- Injeção Direta Validador (Tab 5)",
+    "links": [
+      "t5-link-out-validator"
+    ],
+    "x": 190,
+    "y": 500,
+    "wires": [
+      [
+        "t2-fn-validate-schema"
+      ]
+    ]
+  },
+  {
+    "id": "t2-fn-validate-schema",
+    "type": "function",
+    "z": "tab-analise",
+    "name": "Validar JSON Schema (Ajv2020)",
+    "func": "if (msg._forceFallbackReason) {\n    return [null, msg];\n}\n\nlet candidate = msg.payload;\nif (typeof candidate === \"string\") {\n    const cleaned = candidate.trim().replace(/^```(?:json)?\\s*/i, \"\").replace(/```\\s*$/, \"\").trim();\n    try {\n        candidate = JSON.parse(cleaned);\n    } catch (err) {\n        msg._validationError = \"JSON invalido: \" + err.message;\n        return [null, msg];\n    }\n}\n\nif (!candidate || typeof candidate !== \"object\" || Array.isArray(candidate)) {\n    msg._validationError = \"Payload nao eh um objeto JSON.\";\n    return [null, msg];\n}\n\nconst validateFn = global.get(\"validateDiagnostico\");\nif (typeof validateFn === \"function\") {\n    const valid = validateFn(candidate);\n    if (!valid) {\n        msg._validationError = JSON.stringify(validateFn.errors || []);\n        return [null, msg];\n    }\n} else {\n    const allowedSev = [\"NORMAL\", \"ATENCAO\", \"CRITICO\", \"EMERGENCIA\"];\n    const reqKeys = [\"severidade\", \"diagnostico\", \"causa_provavel\", \"comandos_atuadores\", \"requer_relatorio\", \"resumo_executivo\"];\n    const keys = Object.keys(candidate);\n    const hasAll = reqKeys.every(k => keys.includes(k)) && keys.length === reqKeys.length;\n    const cmd = candidate.comandos_atuadores;\n    const cmdKeys = cmd && typeof cmd === \"object\" ? Object.keys(cmd) : [];\n    const cmdValid = cmd && !Array.isArray(cmd) &&\n        cmdKeys.length === 3 &&\n        [\"cmd_motor\", \"cmd_valvula\", \"cmd_alarme\"].every(k => typeof cmd[k] === \"boolean\");\n    const strValid =\n        allowedSev.includes(candidate.severidade) &&\n        typeof candidate.diagnostico === \"string\" && candidate.diagnostico.length >= 10 && candidate.diagnostico.length <= 400 &&\n        typeof candidate.causa_provavel === \"string\" && candidate.causa_provavel.length >= 5 && candidate.causa_provavel.length <= 250 &&\n        typeof candidate.requer_relatorio === \"boolean\" &&\n        typeof candidate.resumo_executivo === \"string\" && candidate.resumo_executivo.length >= 20 && candidate.resumo_executivo.length <= 800;\n    if (!hasAll || !cmdValid || !strValid) {\n        msg._validationError = \"Falha na validacao estrutural DiagnosticoAtuacaoPLC500.\";\n        return [null, msg];\n    }\n}\n\nmsg.payload = candidate;\nreturn [msg, null];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 540,
+    "y": 520,
+    "wires": [
+      [
+        "t2-fn-monotonicity"
+      ],
+      [
+        "t2-fn-fallback-stats"
+      ]
+    ]
+  },
+  {
+    "id": "t2-fn-fallback-stats",
+    "type": "function",
+    "z": "tab-analise",
+    "name": "Fallback Determinístico (FALLBACK_STATS)",
+    "func": "const a = msg.analise || {\n    severidade_estatistica: 2,\n    fallback_comandos: { cmd_motor: false, cmd_valvula: true, cmd_alarme: true },\n    taxa_presenca_min: 0,\n    zscore_presenca: 0,\n    duty_nivel: 0,\n    duty_sobretemp: 0\n};\nconst labels = [\"NORMAL\", \"ATENCAO\", \"CRITICO\", \"EMERGENCIA\"];\nconst sevIdx = Math.max(0, Math.min(3, Number(a.severidade_estatistica ?? 0)));\nconst sevLabel = labels[sevIdx];\nconst cmd = a.fallback_comandos || { cmd_motor: false, cmd_valvula: true, cmd_alarme: true };\nconst reason = msg._validationError || msg._forceFallbackReason || \"Falha ou timeout na camada cognitiva.\";\n\nconst diagText = (\"Fallback deterministico (\" + sevLabel + \"): taxa=\" + a.taxa_presenca_min +\n    \"/min, z=\" + a.zscore_presenca + \", D_nivel=\" + a.duty_nivel + \", D_temp=\" + a.duty_sobretemp + \".\").slice(0, 400);\nconst causaText = (\"Atuacao segura via matriz deterministica: \" + reason).slice(0, 250);\nconst resumoText = (\"Decisao segura aplicada por fallback estatistico (\" + sevLabel + \") em janela de 60s. \" +\n    \"Comandos: motor=\" + Boolean(cmd.cmd_motor) + \", valvula=\" + Boolean(cmd.cmd_valvula) +\n    \", alarme=\" + Boolean(cmd.cmd_alarme) + \".\").slice(0, 800);\n\nmsg.diagnostico_origem = \"FALLBACK_STATS\";\nmsg.payload = {\n    severidade: sevLabel,\n    diagnostico: diagText.length >= 10 ? diagText : diagText.padEnd(10, \".\"),\n    causa_provavel: causaText.length >= 5 ? causaText : causaText.padEnd(5, \".\"),\n    comandos_atuadores: {\n        cmd_motor: Boolean(cmd.cmd_motor),\n        cmd_valvula: Boolean(cmd.cmd_valvula),\n        cmd_alarme: Boolean(cmd.cmd_alarme)\n    },\n    requer_relatorio: sevIdx >= 1,\n    resumo_executivo: resumoText.length >= 20 ? resumoText : resumoText.padEnd(20, \".\")\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 850,
+    "y": 560,
+    "wires": [
+      [
+        "t2-fn-monotonicity"
+      ]
+    ]
+  },
+  {
+    "id": "t2-fn-monotonicity",
+    "type": "function",
+    "z": "tab-analise",
+    "name": "Guardião de Monotonicidade de Segurança",
+    "func": "const labels = [\"NORMAL\", \"ATENCAO\", \"CRITICO\", \"EMERGENCIA\"];\nconst labelToIdx = { NORMAL: 0, ATENCAO: 1, CRITICO: 2, EMERGENCIA: 3 };\nconst a = msg.analise || {};\nconst cand = msg.payload || {};\n\nconst statIdx = Math.max(0, Math.min(3, Number(a.severidade_estatistica ?? 0)));\nconst candIdx = cand.severidade in labelToIdx ? labelToIdx[cand.severidade] : statIdx;\nlet finalIdx = Math.max(candIdx, statIdx);\nconst reasons = [];\n\nif (finalIdx > candIdx) {\n    reasons.push(\"severity_downgrade_blocked\");\n}\n\nconst cmd = {\n    cmd_motor: Boolean(cand.comandos_atuadores?.cmd_motor),\n    cmd_valvula: Boolean(cand.comandos_atuadores?.cmd_valvula),\n    cmd_alarme: Boolean(cand.comandos_atuadores?.cmd_alarme)\n};\n\nconst emergAtiva = Boolean(a.emerg_ativa || a.flag_emerg_travada || a.di_emergencia_ok === false);\nconst overtempAtiva = Boolean(a.di_sobretemp || Number(a.duty_sobretemp || 0) > 0);\nconst nivelSustentado = Number(a.duty_nivel || 0) >= 0.30;\nconst watchdogAtivo = Boolean(a.flag_watchdog);\n\nif (emergAtiva || finalIdx === 3) {\n    finalIdx = 3;\n    if (cmd.cmd_motor || cmd.cmd_valvula || !cmd.cmd_alarme) {\n        reasons.push(\"emergency_safe_shutdown\");\n    }\n    cmd.cmd_motor = false;\n    cmd.cmd_valvula = false;\n    cmd.cmd_alarme = true;\n} else {\n    if (overtempAtiva || nivelSustentado || watchdogAtivo || finalIdx >= 2) {\n        if (finalIdx < 2) finalIdx = 2;\n        if (cmd.cmd_motor) {\n            reasons.push(\"motor_veto_safety_guard\");\n            cmd.cmd_motor = false;\n        }\n        if (!cmd.cmd_valvula && (overtempAtiva || nivelSustentado || finalIdx === 2)) {\n            reasons.push(\"relief_valve_enforced\");\n            cmd.cmd_valvula = true;\n        }\n        if (!cmd.cmd_alarme) {\n            reasons.push(\"alarm_enforced\");\n            cmd.cmd_alarme = true;\n        }\n    } else if (Number(a.duty_nivel || 0) > 0 && finalIdx === 1 && !cmd.cmd_valvula) {\n        reasons.push(\"preventive_valve_enforced\");\n        cmd.cmd_valvula = true;\n    }\n}\n\nconst sanitizeStr = (s, minLen, maxLen, fallback) => {\n    let txt = typeof s === \"string\" ? s.trim() : fallback;\n    if (txt.length < minLen) txt = (txt + \" \" + fallback).trim().padEnd(minLen, \".\");\n    if (txt.length > maxLen) txt = txt.slice(0, maxLen);\n    return txt;\n};\n\nconst guarded = {\n    severidade: labels[finalIdx],\n    diagnostico: sanitizeStr(cand.diagnostico, 10, 400, \"Diagnostico operacional supervisionado PLC500.\"),\n    causa_provavel: sanitizeStr(cand.causa_provavel, 5, 250, \"Avaliacao de seguranca em janela de 60s.\"),\n    comandos_atuadores: cmd,\n    requer_relatorio: finalIdx >= 1 ? true : Boolean(cand.requer_relatorio),\n    resumo_executivo: sanitizeStr(cand.resumo_executivo, 20, 800, \"Resumo executivo gerado apos validacao de monotonicidade de seguranca.\")\n};\n\nconst validateFn = global.get(\"validateDiagnostico\");\nif (typeof validateFn === \"function\" && !validateFn(guarded)) {\n    node.error(\"Guarded payload failed schema validation: \" + JSON.stringify(validateFn.errors));\n    return null;\n}\n\nif (flow.get(\"ciclo_sumario_horario\") === true) {\n    flow.set(\"ciclo_sumario_horario\", false);\n}\n\nmsg.diagnostico = guarded;\nmsg.severidade_num = finalIdx;\nmsg.origem_decisao = msg.diagnostico_origem || \"FALLBACK_STATS\";\nmsg.monotonicity_applied = reasons.length > 0;\nmsg.guard_reasons = reasons;\nmsg.payload = guarded;\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1150,
+    "y": 500,
+    "wires": [
+      [
+        "t2-link-out-atuacao",
+        "t2-link-out-dash"
+      ]
+    ]
+  },
+  {
+    "id": "t2-link-out-atuacao",
+    "type": "link out",
+    "z": "tab-analise",
+    "name": "-> Atuação & Auditoria Tab 3",
+    "mode": "link",
+    "links": [
+      "t3-link-in-atuacao"
+    ],
+    "x": 1390,
+    "y": 480,
+    "wires": []
+  },
+  {
+    "id": "t2-link-out-dash",
+    "type": "link out",
+    "z": "tab-analise",
+    "name": "-> Dashboard Análise Tab 4",
+    "mode": "link",
+    "links": [
+      "t4-link-in-analise"
+    ],
+    "x": 1390,
+    "y": 540,
+    "wires": []
+  },
+  {
+    "id": "t3-link-in-atuacao",
+    "type": "link in",
+    "z": "tab-atuacao",
+    "name": "<- Decisão Validada Tab 2",
+    "links": [
+      "t2-link-out-atuacao"
+    ],
+    "x": 110,
+    "y": 140,
+    "wires": [
+      [
+        "t3-fn-prep-fc15"
+      ]
+    ]
+  },
+  {
+    "id": "t3-fn-prep-fc15",
+    "type": "function",
+    "z": "tab-atuacao",
+    "name": "Preparar FC15 (Coils 0..2)",
+    "func": "const cfg = global.get(\"plcConfig\") || {};\nconst unitId = Number(cfg.unitId || 1);\nconst d = msg.diagnostico || msg.payload;\nconst cmd = d.comandos_atuadores || { cmd_motor: false, cmd_valvula: false, cmd_alarme: false };\n\nmsg.atuacao = {\n    cmd_motor: Boolean(cmd.cmd_motor),\n    cmd_valvula: Boolean(cmd.cmd_valvula),\n    cmd_alarme: Boolean(cmd.cmd_alarme),\n    severidade_hr2: Number(msg.severidade_num ?? 0),\n    origem_decisao: msg.origem_decisao || \"FALLBACK_STATS\",\n    janela_id: msg.analise?.janela_id ?? null\n};\n\nmsg.payload = {\n    fc: 15,\n    unitid: unitId,\n    address: 0,\n    quantity: 3,\n    value: [msg.atuacao.cmd_motor, msg.atuacao.cmd_valvula, msg.atuacao.cmd_alarme]\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 140,
+    "wires": [
+      [
+        "t3-mb-write-coils"
+      ]
+    ]
+  },
+  {
+    "id": "t3-mb-write-coils",
+    "type": "modbus-flex-write",
+    "z": "tab-atuacao",
+    "name": "Modbus FC15 Coils 0..2",
+    "showStatusActivities": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "server": "cfg-modbus-plc500",
+    "emptyMsgOnFail": false,
+    "keepMsgProperties": true,
+    "delayOnStart": false,
+    "startDelayTime": "",
+    "x": 600,
+    "y": 140,
+    "wires": [
+      [
+        "t3-fn-prep-fc06"
+      ],
+      []
+    ]
+  },
+  {
+    "id": "t3-fn-prep-fc06",
+    "type": "function",
+    "z": "tab-atuacao",
+    "name": "Preparar FC06 HR[2] Severidade",
+    "func": "const cfg = global.get(\"plcConfig\") || {};\nconst unitId = Number(cfg.unitId || 1);\nmsg.payload = {\n    fc: 6,\n    unitid: unitId,\n    address: 2,\n    quantity: 1,\n    value: Number(msg.atuacao?.severidade_hr2 ?? 0)\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 880,
+    "y": 140,
+    "wires": [
+      [
+        "t3-mb-write-hr2"
+      ]
+    ]
+  },
+  {
+    "id": "t3-mb-write-hr2",
+    "type": "modbus-flex-write",
+    "z": "tab-atuacao",
+    "name": "Modbus FC06 HR[2]",
+    "showStatusActivities": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "server": "cfg-modbus-plc500",
+    "emptyMsgOnFail": false,
+    "keepMsgProperties": true,
+    "delayOnStart": false,
+    "startDelayTime": "",
+    "x": 1140,
+    "y": 140,
+    "wires": [
+      [
+        "t3-delay-50ms"
+      ],
+      []
+    ]
+  },
+  {
+    "id": "t3-delay-50ms",
+    "type": "delay",
+    "z": "tab-atuacao",
+    "name": "Aguardar 50 ms Scan CLP",
+    "pauseType": "delay",
+    "timeout": "50",
+    "timeoutUnits": "milliseconds",
+    "rate": "1",
+    "nbRateUnits": "1",
+    "rateUnits": "second",
+    "randomFirst": "1",
+    "randomLast": "5",
+    "randomUnits": "seconds",
+    "drop": false,
+    "allowrate": false,
+    "outputs": 1,
+    "x": 220,
+    "y": 260,
+    "wires": [
+      [
+        "t3-fn-prep-readback"
+      ]
+    ]
+  },
+  {
+    "id": "t3-fn-prep-readback",
+    "type": "function",
+    "z": "tab-atuacao",
+    "name": "Preparar Readback IR[4..7]",
+    "func": "const cfg = global.get(\"plcConfig\") || {};\nconst unitId = Number(cfg.unitId || 1);\nmsg.payload = {\n    fc: 4,\n    unitid: unitId,\n    address: 4,\n    quantity: 4\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 490,
+    "y": 260,
+    "wires": [
+      [
+        "t3-mb-read-ir47"
+      ]
+    ]
+  },
+  {
+    "id": "t3-mb-read-ir47",
+    "type": "modbus-flex-getter",
+    "z": "tab-atuacao",
+    "name": "Modbus FC04 IR[4..7]",
+    "showStatusActivities": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "logIOActivities": false,
+    "server": "cfg-modbus-plc500",
+    "useIOFile": false,
+    "ioFile": "",
+    "useIOForPayload": false,
+    "emptyMsgOnFail": false,
+    "keepMsgProperties": true,
+    "delayOnStart": false,
+    "startDelayTime": "",
+    "x": 750,
+    "y": 260,
+    "wires": [
+      [
+        "t3-fn-veto-and-diag-sql"
+      ],
+      []
+    ]
+  },
+  {
+    "id": "t3-fn-veto-and-diag-sql",
+    "type": "function",
+    "z": "tab-atuacao",
+    "name": "Auditar Veto + INSERT diagnosticos_ia",
+    "func": "const ir = Array.isArray(msg.payload) ? msg.payload : [];\nconst a = msg.atuacao || {};\nconst d = msg.diagnostico || {};\nconst analise = msg.analise || {};\n\nconst estadoClp = ir.length >= 1 ? Number(ir[0]) : Number(analise.estado_clp ?? 0);\nconst mascaraReal = ir.length >= 2 ? (Number(ir[1]) & 0x0F) : null;\nconst codIntertrav = ir.length >= 4 ? Number(ir[3]) : Number(analise.cod_intertravamento ?? 0);\n\nconst cmdMask = (a.cmd_motor ? 1 : 0) | (a.cmd_valvula ? 2 : 0) | (a.cmd_alarme ? 4 : 0);\nconst vetoLocal = (codIntertrav > 0) || (mascaraReal !== null && ((mascaraReal & 0x07) !== cmdMask));\n\na.estado_clp_real = estadoClp;\na.mascara_do_confirm = mascaraReal;\na.cod_intertrav_real = codIntertrav;\na.veto_local_clp = Boolean(vetoLocal);\nmsg.atuacao = a;\n\nif (a.janela_id === null || a.janela_id === undefined) {\n    // Fallback row if triggered directly from Tab 5 without prior window insert\n    msg.query = `WITH ins AS (\n        INSERT INTO janelas_analiticas (\n            janela_inicio, janela_fim, amostras_k, taxa_presenca_min, duty_nivel,\n            duty_sobretemp, zscore_presenca, severidade_estatistica, chattering_index\n        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id\n    )\n    INSERT INTO diagnosticos_ia (\n        janela_id, severidade_final, origem_decisao, diagnostico, causa_provavel, payload_validado, relatorio_enviado\n    ) SELECT ins.id, $10, $11, $12, $13, $14::jsonb, FALSE FROM ins RETURNING id;`;\n    msg.params = [\n        analise.janela_inicio || new Date().toISOString(),\n        analise.janela_fim || new Date().toISOString(),\n        Number(analise.amostras_k || 1),\n        Number(analise.taxa_presenca_min || 0),\n        Number(analise.duty_nivel || 0),\n        Number(analise.duty_sobretemp || 0),\n        Number(analise.zscore_presenca || 0),\n        Number(analise.severidade_estatistica || 0),\n        Number(analise.chattering_index || 0),\n        d.severidade,\n        a.origem_decisao || \"FALLBACK_STATS\",\n        d.diagnostico,\n        d.causa_provavel,\n        JSON.stringify(d)\n    ];\n} else {\n    msg.query = `INSERT INTO diagnosticos_ia (\n        janela_id, severidade_final, origem_decisao, diagnostico, causa_provavel, payload_validado, relatorio_enviado\n    ) VALUES ($1,$2,$3,$4,$5,$6::jsonb,FALSE) RETURNING id;`;\n    msg.params = [\n        a.janela_id,\n        d.severidade,\n        a.origem_decisao || \"FALLBACK_STATS\",\n        d.diagnostico,\n        d.causa_provavel,\n        JSON.stringify(d)\n    ];\n}\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1050,
+    "y": 260,
+    "wires": [
+      [
+        "t3-pg-insert-diag"
+      ]
+    ]
+  },
+  {
+    "id": "t3-pg-insert-diag",
+    "type": "postgresql",
+    "z": "tab-atuacao",
+    "name": "PG INSERT diagnosticos_ia",
+    "query": "",
+    "postgreSQLConfig": "cfg-pg-plc500",
+    "split": false,
+    "rowsPerMsg": 1,
+    "outputs": 1,
+    "x": 230,
+    "y": 380,
+    "wires": [
+      [
+        "t3-fn-cmd-sql"
+      ]
+    ]
+  },
+  {
+    "id": "t3-fn-cmd-sql",
+    "type": "function",
+    "z": "tab-atuacao",
+    "name": "Preparar INSERT comandos_atuadores",
+    "func": "const diagId = Array.isArray(msg.payload) && msg.payload[0]?.id !== undefined\n    ? Number(msg.payload[0].id)\n    : null;\nconst a = msg.atuacao || {};\na.diagnostico_id = diagId;\nmsg.atuacao = a;\n\nmsg.query = `INSERT INTO comandos_atuadores (\n    diagnostico_id, cmd_motor, cmd_valvula, cmd_alarme, severidade_hr2, mascara_do_confirm, veto_local_clp\n) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id;`;\nmsg.params = [\n    diagId,\n    Boolean(a.cmd_motor),\n    Boolean(a.cmd_valvula),\n    Boolean(a.cmd_alarme),\n    Number(a.severidade_hr2 ?? 0),\n    a.mascara_do_confirm ?? null,\n    Boolean(a.veto_local_clp)\n];\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 540,
+    "y": 380,
+    "wires": [
+      [
+        "t3-pg-insert-cmd"
+      ]
+    ]
+  },
+  {
+    "id": "t3-pg-insert-cmd",
+    "type": "postgresql",
+    "z": "tab-atuacao",
+    "name": "PG INSERT comandos_atuadores",
+    "query": "",
+    "postgreSQLConfig": "cfg-pg-plc500",
+    "split": false,
+    "rowsPerMsg": 1,
+    "outputs": 1,
+    "x": 850,
+    "y": 380,
+    "wires": [
+      [
+        "t3-switch-report"
+      ]
+    ]
+  },
+  {
+    "id": "t3-switch-report",
+    "type": "switch",
+    "z": "tab-atuacao",
+    "name": "requer_relatorio?",
+    "property": "diagnostico.requer_relatorio",
+    "propertyType": "msg",
+    "rules": [
+      {
+        "t": "true"
+      }
+    ],
+    "checkall": "true",
+    "repair": false,
+    "outputs": 1,
+    "x": 1120,
+    "y": 380,
+    "wires": [
+      [
+        "t3-tpl-markdown"
+      ]
+    ]
+  },
+  {
+    "id": "t3-tpl-markdown",
+    "type": "template",
+    "z": "tab-atuacao",
+    "name": "Gerar Relatório Markdown (CT-10)",
+    "field": "payload",
+    "fieldType": "msg",
+    "format": "handlebars",
+    "syntax": "mustache",
+    "template": "# Relatório de Incidente — WEG PLC500 ({{diagnostico.severidade}})\n\n- **Origem da Decisão:** {{origem_decisao}}\n- **Janela (UTC):** {{analise.janela_inicio}} → {{analise.janela_fim}} (`K={{analise.amostras_k}}`)\n- **Métricas:** Taxa B1 = `{{analise.taxa_presenca_min}} ev/min` | Z-score = `{{analise.zscore_presenca}}` | Duty Nível = `{{analise.duty_nivel}}` | Duty Temp = `{{analise.duty_sobretemp}}` | Chattering = `{{analise.chattering_index}}`\n\n## Diagnóstico & Causa Provável\n- **Diagnóstico:** {{diagnostico.diagnostico}}\n- **Causa Provável:** {{diagnostico.causa_provavel}}\n- **Resumo Executivo:** {{diagnostico.resumo_executivo}}\n\n## Atuação & Verificação Local CLP\n- **Comandos Enviados (`Coils 0..2`, `HR[2]`):** Motor=`{{atuacao.cmd_motor}}`, Válvula=`{{atuacao.cmd_valvula}}`, Alarme=`{{atuacao.cmd_alarme}}`, Sev=`{{atuacao.severidade_hr2}}`\n- **Leitura Real (`IR[5] wMascara_DO_Real`):** `{{atuacao.mascara_do_confirm}}` | **Intertravamento (`IR[7]`):** `{{atuacao.cod_intertrav_real}}` | **Veto Local CLP:** `{{atuacao.veto_local_clp}}`\n",
+    "output": "str",
+    "x": 260,
+    "y": 500,
+    "wires": [
+      [
+        "t3-fn-after-report"
+      ]
+    ]
+  },
+  {
+    "id": "t3-fn-after-report",
+    "type": "function",
+    "z": "tab-atuacao",
+    "name": "Marcar relatorio_enviado + Telegram",
+    "func": "const markdown = String(msg.payload || \"\");\nglobal.set(\"latest_markdown_report\", markdown);\n\nconst diagId = msg.atuacao?.diagnostico_id ?? null;\nconst pgUpdateMsg = diagId !== null ? {\n    query: \"UPDATE diagnosticos_ia SET relatorio_enviado = TRUE WHERE id = $1;\",\n    params: [diagId]\n} : null;\n\nconst cfg = global.get(\"plcConfig\") || {};\nlet tgMsg = null;\nif (cfg.telegramBotToken && cfg.telegramChatId) {\n    tgMsg = {\n        url: \"https://api.telegram.org/bot\" + cfg.telegramBotToken + \"/sendMessage\",\n        method: \"POST\",\n        headers: { \"Content-Type\": \"application/json\" },\n        payload: {\n            chat_id: cfg.telegramChatId,\n            text: markdown.slice(0, 4000)\n        }\n    };\n}\n\nconst dashReportMsg = { payload: markdown, topic: \"markdown_report\" };\nreturn [pgUpdateMsg, tgMsg, dashReportMsg];",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 570,
+    "y": 500,
+    "wires": [
+      [
+        "t3-pg-mark-sent"
+      ],
+      [
+        "t3-http-telegram"
+      ],
+      [
+        "t3-link-out-dash-rep"
+      ]
+    ]
+  },
+  {
+    "id": "t3-pg-mark-sent",
+    "type": "postgresql",
+    "z": "tab-atuacao",
+    "name": "PG UPDATE relatorio_enviado=TRUE",
+    "query": "",
+    "postgreSQLConfig": "cfg-pg-plc500",
+    "split": false,
+    "rowsPerMsg": 1,
+    "outputs": 1,
+    "x": 920,
+    "y": 460,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "t3-http-telegram",
+    "type": "http request",
+    "z": "tab-atuacao",
+    "name": "Enviar Telegram (Opcional)",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "timeout": "4000",
+    "x": 900,
+    "y": 520,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "t3-link-out-dash-rep",
+    "type": "link out",
+    "z": "tab-atuacao",
+    "name": "-> Dashboard Relatório Tab 4",
+    "mode": "link",
+    "links": [
+      "t4-link-in-analise"
+    ],
+    "x": 880,
+    "y": 580,
+    "wires": []
+  },
+  {
+    "id": "t3-catch",
+    "type": "catch",
+    "z": "tab-atuacao",
+    "name": "Erros Atuação/Auditoria",
+    "scope": null,
+    "uncaught": false,
+    "x": 210,
+    "y": 600,
+    "wires": [
+      [
+        "t3-dbg-err"
+      ]
+    ]
+  },
+  {
+    "id": "t3-dbg-err",
+    "type": "debug",
+    "z": "tab-atuacao",
+    "name": "Log Erro Tab 3",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": true,
+    "complete": "error",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 450,
+    "y": 600,
+    "wires": []
+  },
+  {
+    "id": "t4-link-in-tel",
+    "type": "link in",
+    "z": "tab-dashboard",
+    "name": "<- Telemetria Tab 1",
+    "links": [
+      "t1-link-out-dash"
+    ],
+    "x": 130,
+    "y": 140,
+    "wires": [
+      [
+        "t4-fn-format-tel"
+      ]
+    ]
+  },
+  {
+    "id": "t4-fn-format-tel",
+    "type": "function",
+    "z": "tab-dashboard",
+    "name": "Formatar I/O & FSM Dashboard",
+    "func": "const t = msg.payload || {};\nconst mask = Number(t.mascara_do_real || 0);\nconst fsmLabels = {\n    0: \"0: INIT\",\n    1: \"1: NORMAL_AUTO\",\n    2: \"2: ALERTA_SUPERV\",\n    3: \"3: MODO_DEGRADADO\",\n    4: \"4: EMERGENCIA_TRAV\"\n};\nconst intertravLabels = {\n    0: \"0: Nenhum\",\n    1: \"1: Emergência (NF)\",\n    2: \"2: Sobretemperatura\",\n    3: \"3: Watchdog\"\n};\n\nconst ioMsg = {\n    payload: {\n        di0_presenca: Boolean(t.di_presenca),\n        di1_nivel_alto: Boolean(t.di_nivel_alto),\n        di2_sobretemp: Boolean(t.di_sobretemp),\n        di3_emergencia_ok: Boolean(t.di_emergencia_ok),\n        do0_motor: Boolean(mask & 1),\n        do1_valvula: Boolean(mask & 2),\n        do2_alarme: Boolean(mask & 4),\n        do3_status: Boolean(mask & 8)\n    }\n};\n\nconst fsmMsg = { payload: fsmLabels[t.estado_clp] || String(t.estado_clp ?? \"-\") };\nconst intMsg = { payload: (intertravLabels[t.cod_intertrav] || String(t.cod_intertrav ?? \"-\")) +\n    \" | Echo HB: \" + (t.echo_heartbeat ?? 0) + \" | RTT: \" + (t.rtt_ms ?? 0) + \" ms\" };\n\nreturn [ioMsg, fsmMsg, intMsg];",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 140,
+    "wires": [
+      [
+        "t4-ui-leds"
+      ],
+      [
+        "t4-ui-fsm"
+      ],
+      [
+        "t4-ui-intertrav"
+      ]
+    ]
+  },
+  {
+    "id": "t4-ui-leds",
+    "type": "ui-template",
+    "z": "tab-dashboard",
+    "group": "ui-grp-io",
+    "page": "",
+    "ui": "",
+    "name": "Painel LEDs 24 Vcc",
+    "order": 1,
+    "width": 6,
+    "height": 4,
+    "head": "",
+    "format": "<div style=\"display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-family:sans-serif;font-size:12px;\">\n  <div style=\"padding:8px;border:1px solid #d9e2ec;border-radius:6px;text-align:center;\">\n    <div><b>DI0 B1 Presença</b></div>\n    <div style=\"margin-top:4px;font-weight:bold;color:{{msg.payload.di0_presenca ? '#1f7a1f' : '#64748b'}};\">{{msg.payload.di0_presenca ? '24V ON' : '0V OFF'}}</div>\n  </div>\n  <div style=\"padding:8px;border:1px solid #d9e2ec;border-radius:6px;text-align:center;\">\n    <div><b>DI1 B2 Nível</b></div>\n    <div style=\"margin-top:4px;font-weight:bold;color:{{msg.payload.di1_nivel_alto ? '#b45309' : '#64748b'}};\">{{msg.payload.di1_nivel_alto ? '24V ON' : '0V OFF'}}</div>\n  </div>\n  <div style=\"padding:8px;border:1px solid #d9e2ec;border-radius:6px;text-align:center;\">\n    <div><b>DI2 B3 Sobretemp</b></div>\n    <div style=\"margin-top:4px;font-weight:bold;color:{{msg.payload.di2_sobretemp ? '#b91c1c' : '#64748b'}};\">{{msg.payload.di2_sobretemp ? '24V ON' : '0V OFF'}}</div>\n  </div>\n  <div style=\"padding:8px;border:1px solid #d9e2ec;border-radius:6px;text-align:center;\">\n    <div><b>DI3 B4 Emerg (NF)</b></div>\n    <div style=\"margin-top:4px;font-weight:bold;color:{{msg.payload.di3_emergencia_ok ? '#1f7a1f' : '#b91c1c'}};\">{{msg.payload.di3_emergencia_ok ? 'OK (24V)' : 'ABERTA (0V)'}}</div>\n  </div>\n  <div style=\"padding:8px;border:1px solid #d9e2ec;border-radius:6px;text-align:center;\">\n    <div><b>DO0 L1 Motor</b></div>\n    <div style=\"margin-top:4px;font-weight:bold;color:{{msg.payload.do0_motor ? '#16a34a' : '#64748b'}};\">{{msg.payload.do0_motor ? 'LIGADO' : 'DESL'}}</div>\n  </div>\n  <div style=\"padding:8px;border:1px solid #d9e2ec;border-radius:6px;text-align:center;\">\n    <div><b>DO1 L2 Válvula</b></div>\n    <div style=\"margin-top:4px;font-weight:bold;color:{{msg.payload.do1_valvula ? '#ca8a04' : '#64748b'}};\">{{msg.payload.do1_valvula ? 'ABERTA' : 'FECH'}}</div>\n  </div>\n  <div style=\"padding:8px;border:1px solid #d9e2ec;border-radius:6px;text-align:center;\">\n    <div><b>DO2 L3 Alarme</b></div>\n    <div style=\"margin-top:4px;font-weight:bold;color:{{msg.payload.do2_alarme ? '#dc2626' : '#64748b'}};\">{{msg.payload.do2_alarme ? 'ATIVO' : 'INAT'}}</div>\n  </div>\n  <div style=\"padding:8px;border:1px solid #d9e2ec;border-radius:6px;text-align:center;\">\n    <div><b>DO3 L4 Operação</b></div>\n    <div style=\"margin-top:4px;font-weight:bold;color:{{msg.payload.do3_status ? '#0284c7' : '#64748b'}};\">{{msg.payload.do3_status ? 'REMOTO OK' : 'INAT'}}</div>\n  </div>\n</div>",
+    "storeOutMessages": false,
+    "passthru": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 680,
+    "y": 100,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "t4-ui-fsm",
+    "type": "ui-text",
+    "z": "tab-dashboard",
+    "group": "ui-grp-fsm",
+    "order": 1,
+    "width": 6,
+    "height": 1,
+    "name": "Estado CLP",
+    "label": "Estado FSM (IR[4]):",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#111827",
+    "className": "",
+    "x": 660,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "t4-ui-intertrav",
+    "type": "ui-text",
+    "z": "tab-dashboard",
+    "group": "ui-grp-fsm",
+    "order": 2,
+    "width": 6,
+    "height": 1,
+    "name": "Intertravamento & Heartbeat",
+    "label": "Intertravamento (IR[7]):",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 14,
+    "color": "#374151",
+    "className": "",
+    "x": 700,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "t4-link-in-analise",
+    "type": "link in",
+    "z": "tab-dashboard",
+    "name": "<- Análise & Relatório Tab 2/3",
+    "links": [
+      "t2-link-out-dash",
+      "t3-link-out-dash-rep"
+    ],
+    "x": 150,
+    "y": 320,
+    "wires": [
+      [
+        "t4-fn-format-analise"
+      ]
+    ]
+  },
+  {
+    "id": "t4-fn-format-analise",
+    "type": "function",
+    "z": "tab-dashboard",
+    "name": "Formatar Métricas & Diagnóstico",
+    "func": "if (msg.topic === \"markdown_report\") {\n    return [null, null, null, null, { payload: String(msg.payload || \"\") }];\n}\n\nconst a = msg.analise || {};\nconst d = msg.diagnostico || msg.payload || {};\n\nconst gaugeTaxa = { payload: Number(a.taxa_presenca_min ?? 0) };\nconst gaugeZ = { payload: Number(a.zscore_presenca ?? 0) };\nconst chartMsg = [\n    { topic: \"Taxa Presença (ev/min)\", payload: Number(a.taxa_presenca_min ?? 0) },\n    { topic: \"Duty Nível (%)\", payload: Number(((a.duty_nivel ?? 0) * 100).toFixed(1)) },\n    { topic: \"Duty Sobretemp (%)\", payload: Number(((a.duty_sobretemp ?? 0) * 100).toFixed(1)) }\n];\nconst diagText = {\n    payload: \"[\" + (d.severidade || \"NORMAL\") + \" | \" + (msg.origem_decisao || \"STATS\") + \"] \" +\n        (d.diagnostico || \"\")\n};\nreturn [gaugeTaxa, gaugeZ, chartMsg, diagText, null];",
+    "outputs": 5,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 320,
+    "wires": [
+      [
+        "t4-ui-gauge-taxa"
+      ],
+      [
+        "t4-ui-gauge-z"
+      ],
+      [
+        "t4-ui-chart"
+      ],
+      [
+        "t4-ui-diag"
+      ],
+      [
+        "t4-ui-report"
+      ]
+    ]
+  },
+  {
+    "id": "t4-ui-gauge-taxa",
+    "type": "ui-gauge",
+    "z": "tab-dashboard",
+    "name": "Gauge Taxa B1",
+    "group": "ui-grp-metrics",
+    "order": 1,
+    "width": 4,
+    "height": 3,
+    "gtype": "gauge-half",
+    "gstyle": "needle",
+    "title": "Taxa B1 (ev/min)",
+    "units": "ev/min",
+    "icon": "",
+    "prefix": "",
+    "suffix": "",
+    "segments": [
+      {
+        "from": "0",
+        "color": "#dc2626"
+      },
+      {
+        "from": "6",
+        "color": "#eab308"
+      },
+      {
+        "from": "8",
+        "color": "#16a34a"
+      },
+      {
+        "from": "17",
+        "color": "#eab308"
+      },
+      {
+        "from": "20",
+        "color": "#dc2626"
+      }
+    ],
+    "min": 0,
+    "max": 45,
+    "sizeThickness": 16,
+    "sizeGap": 4,
+    "sizeKeyThickness": 8,
+    "styleRounded": true,
+    "styleGlow": false,
+    "className": "",
+    "x": 720,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "t4-ui-gauge-z",
+    "type": "ui-gauge",
+    "z": "tab-dashboard",
+    "name": "Gauge Z-score",
+    "group": "ui-grp-metrics",
+    "order": 2,
+    "width": 4,
+    "height": 3,
+    "gtype": "gauge-half",
+    "gstyle": "needle",
+    "title": "Z-score (z1)",
+    "units": "σ",
+    "icon": "",
+    "prefix": "",
+    "suffix": "",
+    "segments": [
+      {
+        "from": "-6",
+        "color": "#dc2626"
+      },
+      {
+        "from": "-3",
+        "color": "#eab308"
+      },
+      {
+        "from": "-2",
+        "color": "#16a34a"
+      },
+      {
+        "from": "2",
+        "color": "#eab308"
+      },
+      {
+        "from": "3",
+        "color": "#dc2626"
+      }
+    ],
+    "min": -6,
+    "max": 6,
+    "sizeThickness": 16,
+    "sizeGap": 4,
+    "sizeKeyThickness": 8,
+    "styleRounded": true,
+    "styleGlow": false,
+    "className": "",
+    "x": 720,
+    "y": 280,
+    "wires": []
+  },
+  {
+    "id": "t4-ui-chart",
+    "type": "ui-chart",
+    "z": "tab-dashboard",
+    "group": "ui-grp-metrics",
+    "name": "Tendência Janela 60 s",
+    "label": "Série Histórica (Taxa & Duty Cycles)",
+    "order": 3,
+    "width": 8,
+    "height": 4,
+    "chartType": "line",
+    "category": "topic",
+    "categoryType": "msg",
+    "xAxisLabel": "Tempo",
+    "xAxisProperty": "",
+    "xAxisPropertyType": "timestamp",
+    "xAxisType": "time",
+    "xAxisFormat": "",
+    "xAxisFormatType": "auto",
+    "yAxisLabel": "Valor",
+    "yAxisProperty": "payload",
+    "ymin": "",
+    "ymax": "",
+    "action": "append",
+    "stackSeries": false,
+    "pointShape": "circle",
+    "pointRadius": 3,
+    "showLegend": true,
+    "removeOlder": 1,
+    "removeOlderUnit": "3600",
+    "removeOlderPoints": "120",
+    "colors": [
+      "#0284c7",
+      "#eab308",
+      "#dc2626"
+    ],
+    "textColor": [
+      "#64748b"
+    ],
+    "gridColor": [
+      "#e2e8f0"
+    ],
+    "className": "",
+    "x": 740,
+    "y": 320,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "t4-ui-diag",
+    "type": "ui-text",
+    "z": "tab-dashboard",
+    "group": "ui-grp-metrics",
+    "order": 4,
+    "width": 8,
+    "height": 2,
+    "name": "Último Diagnóstico",
+    "label": "Último Diagnóstico:",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "style": false,
+    "font": "",
+    "fontSize": 14,
+    "color": "#111827",
+    "className": "",
+    "x": 730,
+    "y": 360,
+    "wires": []
+  },
+  {
+    "id": "t4-ui-report",
+    "type": "ui-template",
+    "z": "tab-dashboard",
+    "group": "ui-grp-controls",
+    "page": "",
+    "ui": "",
+    "name": "Último Relatório Markdown",
+    "order": 3,
+    "width": 4,
+    "height": 5,
+    "head": "",
+    "format": "<pre style=\"white-space:pre-wrap;font-size:12px;background:#f8fafc;padding:8px;border-radius:4px;border:1px solid #e2e8f0;\">{{msg.payload || 'Nenhum relatório de incidente emitido ainda.'}}</pre>",
+    "storeOutMessages": false,
+    "passthru": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 750,
+    "y": 400,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "t4-ui-switch-remoto",
+    "type": "ui-switch",
+    "z": "tab-dashboard",
+    "name": "Habilitar Remoto (Coil[4])",
+    "label": "Habilitação Remota (Coil[4])",
+    "group": "ui-grp-controls",
+    "order": 1,
+    "width": 4,
+    "height": 1,
+    "passthru": false,
+    "decouple": false,
+    "topic": "coil4",
+    "topicType": "str",
+    "style": "",
+    "className": "",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "onicon": "",
+    "oncolor": "",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "officon": "",
+    "offcolor": "",
+    "x": 170,
+    "y": 460,
+    "wires": [
+      [
+        "t4-fn-coil4"
+      ]
+    ]
+  },
+  {
+    "id": "t4-fn-coil4",
+    "type": "function",
+    "z": "tab-dashboard",
+    "name": "Preparar FC05 Coil[4]",
+    "func": "const cfg = global.get(\"plcConfig\") || {};\nmsg.payload = {\n    fc: 5,\n    unitid: Number(cfg.unitId || 1),\n    address: 4,\n    quantity: 1,\n    value: Boolean(msg.payload)\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 420,
+    "y": 460,
+    "wires": [
+      [
+        "t4-mb-write-ctrl"
+      ]
+    ]
+  },
+  {
+    "id": "t4-ui-btn-reset",
+    "type": "ui-button",
+    "z": "tab-dashboard",
+    "group": "ui-grp-controls",
+    "name": "Reset Falha (Coil[3])",
+    "label": "Rearme de Falha (Coil[3])",
+    "order": 2,
+    "width": 4,
+    "height": 1,
+    "emulateClick": false,
+    "tooltip": "Pulso de rearme (válido somente se DI3=1 e DI2=0)",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "mdi-restart",
+    "iconPosition": "left",
+    "payload": "true",
+    "payloadType": "bool",
+    "topic": "coil3",
+    "topicType": "str",
+    "buttonColor": "",
+    "textColor": "",
+    "iconColor": "",
+    "enableClick": true,
+    "x": 160,
+    "y": 520,
+    "wires": [
+      [
+        "t4-fn-coil3-on"
+      ]
+    ]
+  },
+  {
+    "id": "t4-fn-coil3-on",
+    "type": "function",
+    "z": "tab-dashboard",
+    "name": "Pulso Coil[3]=TRUE",
+    "func": "const cfg = global.get(\"plcConfig\") || {};\nmsg.payload = {\n    fc: 5,\n    unitid: Number(cfg.unitId || 1),\n    address: 3,\n    quantity: 1,\n    value: true\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 520,
+    "wires": [
+      [
+        "t4-mb-write-ctrl",
+        "t4-delay-500ms"
+      ]
+    ]
+  },
+  {
+    "id": "t4-delay-500ms",
+    "type": "delay",
+    "z": "tab-dashboard",
+    "name": "500 ms Pulso",
+    "pauseType": "delay",
+    "timeout": "500",
+    "timeoutUnits": "milliseconds",
+    "rate": "1",
+    "nbRateUnits": "1",
+    "rateUnits": "second",
+    "randomFirst": "1",
+    "randomLast": "5",
+    "randomUnits": "seconds",
+    "drop": false,
+    "allowrate": false,
+    "outputs": 1,
+    "x": 400,
+    "y": 580,
+    "wires": [
+      [
+        "t4-fn-coil3-off"
+      ]
+    ]
+  },
+  {
+    "id": "t4-fn-coil3-off",
+    "type": "function",
+    "z": "tab-dashboard",
+    "name": "Pulso Coil[3]=FALSE",
+    "func": "const cfg = global.get(\"plcConfig\") || {};\nmsg.payload = {\n    fc: 5,\n    unitid: Number(cfg.unitId || 1),\n    address: 3,\n    quantity: 1,\n    value: false\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 620,
+    "y": 580,
+    "wires": [
+      [
+        "t4-mb-write-ctrl"
+      ]
+    ]
+  },
+  {
+    "id": "t4-mb-write-ctrl",
+    "type": "modbus-flex-write",
+    "z": "tab-dashboard",
+    "name": "Modbus FC05 Controles Remotos",
+    "showStatusActivities": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "server": "cfg-modbus-plc500",
+    "emptyMsgOnFail": false,
+    "keepMsgProperties": false,
+    "delayOnStart": false,
+    "startDelayTime": "",
+    "x": 790,
+    "y": 490,
+    "wires": [
+      [],
+      []
+    ]
+  },
+  {
+    "id": "t5-inj-hab-remoto",
+    "type": "inject",
+    "z": "tab-testes",
+    "name": "Habilitar Remoto (Coil[4]=1)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "true",
+    "payloadType": "bool",
+    "x": 160,
+    "y": 60,
+    "wires": [
+      [
+        "t5-fn-coil4-on"
+      ]
+    ]
+  },
+  {
+    "id": "t5-fn-coil4-on",
+    "type": "function",
+    "z": "tab-testes",
+    "name": "FC05 Coil[4]=1",
+    "func": "const cfg = global.get(\"plcConfig\") || {};\nmsg.payload = { fc: 5, unitid: Number(cfg.unitId || 1), address: 4, quantity: 1, value: true };\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 60,
+    "wires": [
+      [
+        "t5-mb-write"
+      ]
+    ]
+  },
+  {
+    "id": "t5-inj-reset-on",
+    "type": "inject",
+    "z": "tab-testes",
+    "name": "Rearme Falha (Coil[3]=1)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "true",
+    "payloadType": "bool",
+    "x": 150,
+    "y": 110,
+    "wires": [
+      [
+        "t5-fn-coil3-pulse"
+      ]
+    ]
+  },
+  {
+    "id": "t5-fn-coil3-pulse",
+    "type": "function",
+    "z": "tab-testes",
+    "name": "FC05 Coil[3]",
+    "func": "const cfg = global.get(\"plcConfig\") || {};\nmsg.payload = { fc: 5, unitid: Number(cfg.unitId || 1), address: 3, quantity: 1, value: Boolean(msg.payload) };\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 390,
+    "y": 110,
+    "wires": [
+      [
+        "t5-mb-write"
+      ]
+    ]
+  },
+  {
+    "id": "t5-inj-ct02",
+    "type": "inject",
+    "z": "tab-testes",
+    "name": "CT-02 Ligar L1+L2 (FC15)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "ct02",
+    "payloadType": "str",
+    "x": 150,
+    "y": 160,
+    "wires": [
+      [
+        "t5-fn-ct02-leds"
+      ]
+    ]
+  },
+  {
+    "id": "t5-fn-ct02-leds",
+    "type": "function",
+    "z": "tab-testes",
+    "name": "FC15 Coils 0..2",
+    "func": "const cfg = global.get(\"plcConfig\") || {};\nmsg.payload = { fc: 15, unitid: Number(cfg.unitId || 1), address: 0, quantity: 3, value: [true, true, false] };\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 160,
+    "wires": [
+      [
+        "t5-mb-write"
+      ]
+    ]
+  },
+  {
+    "id": "t5-mb-write",
+    "type": "modbus-flex-write",
+    "z": "tab-testes",
+    "name": "Modbus Testes Manuais",
+    "showStatusActivities": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "server": "cfg-modbus-plc500",
+    "emptyMsgOnFail": false,
+    "keepMsgProperties": false,
+    "delayOnStart": false,
+    "startDelayTime": "",
+    "x": 660,
+    "y": 110,
+    "wires": [
+      [],
+      []
+    ]
+  },
+  {
+    "id": "t5-inj-ct09-pause",
+    "type": "inject",
+    "z": "tab-testes",
+    "name": "CT-09 Pausar Heartbeat",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "true",
+    "payloadType": "bool",
+    "x": 150,
+    "y": 230,
+    "wires": [
+      [
+        "t5-fn-hb-pause"
+      ]
+    ]
+  },
+  {
+    "id": "t5-inj-ct09-resume",
+    "type": "inject",
+    "z": "tab-testes",
+    "name": "CT-09 Retomar Heartbeat",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "false",
+    "payloadType": "bool",
+    "x": 150,
+    "y": 280,
+    "wires": [
+      [
+        "t5-fn-hb-pause"
+      ]
+    ]
+  },
+  {
+    "id": "t5-fn-hb-pause",
+    "type": "function",
+    "z": "tab-testes",
+    "name": "Alternar pause_heartbeat",
+    "func": "const pause = Boolean(msg.payload);\nglobal.set(\"pause_heartbeat\", pause);\nnode.status({ fill: pause ? \"red\" : \"green\", shape: \"dot\", text: pause ? \"HB PAUSADO (CT-09)\" : \"HB ATIVO\" });\nreturn { payload: { pause_heartbeat: pause } };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 430,
+    "y": 255,
+    "wires": [
+      [
+        "t5-dbg-res"
+      ]
+    ]
+  },
+  {
+    "id": "t5-inj-ct05",
+    "type": "inject",
+    "z": "tab-testes",
+    "name": "CT-05 Injetar JSON Válido",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "ct05",
+    "payloadType": "str",
+    "x": 150,
+    "y": 350,
+    "wires": [
+      [
+        "t5-fn-ct05-valid"
+      ]
+    ]
+  },
+  {
+    "id": "t5-fn-ct05-valid",
+    "type": "function",
+    "z": "tab-testes",
+    "name": "Payload Válido CT-05",
+    "func": "msg.analise = {\n    janela_id: null,\n    janela_inicio: new Date(Date.now() - 60000).toISOString(),\n    janela_fim: new Date().toISOString(),\n    amostras_k: 120,\n    taxa_presenca_min: 10.0,\n    duty_nivel: 0.45,\n    duty_sobretemp: 0.0,\n    zscore_presenca: -0.8,\n    chattering_index: 0.12,\n    emerg_ativa: false,\n    di_sobretemp: false,\n    flag_watchdog: false,\n    severidade_estatistica: 2,\n    fallback_comandos: { cmd_motor: false, cmd_valvula: true, cmd_alarme: true },\n    acionar_llm: true\n};\nmsg.diagnostico_origem = \"LLM\";\nmsg.payload = {\n    severidade: \"CRITICO\",\n    diagnostico: \"Nivel alto sustentado no reservatorio B2 acima de 30% na janela de 60s.\",\n    causa_provavel: \"Acumulo de fluido por obstrucao parcial ou falha de escoamento.\",\n    comandos_atuadores: { cmd_motor: false, cmd_valvula: true, cmd_alarme: true },\n    requer_relatorio: true,\n    resumo_executivo: \"Teste CT-05: Motor desligado, valvula de alivio aberta e alarme sonoro/visual acionado.\"\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 420,
+    "y": 350,
+    "wires": [
+      [
+        "t5-link-out-validator"
+      ]
+    ]
+  },
+  {
+    "id": "t5-inj-ct06",
+    "type": "inject",
+    "z": "tab-testes",
+    "name": "CT-06 Injetar JSON Inválido",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "ct06",
+    "payloadType": "str",
+    "x": 160,
+    "y": 400,
+    "wires": [
+      [
+        "t5-fn-ct06-malformed"
+      ]
+    ]
+  },
+  {
+    "id": "t5-fn-ct06-malformed",
+    "type": "function",
+    "z": "tab-testes",
+    "name": "Payload Inválido CT-06",
+    "func": "msg.analise = {\n    janela_id: null,\n    janela_inicio: new Date(Date.now() - 60000).toISOString(),\n    janela_fim: new Date().toISOString(),\n    amostras_k: 120,\n    taxa_presenca_min: 11.0,\n    duty_nivel: 0.40,\n    duty_sobretemp: 0.0,\n    zscore_presenca: -0.4,\n    chattering_index: 0.10,\n    emerg_ativa: false,\n    di_sobretemp: false,\n    flag_watchdog: false,\n    severidade_estatistica: 2,\n    fallback_comandos: { cmd_motor: false, cmd_valvula: true, cmd_alarme: true },\n    acionar_llm: true\n};\nmsg.diagnostico_origem = \"LLM\";\nmsg.payload = \"{ json_malformado_ct06: \";\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 420,
+    "y": 400,
+    "wires": [
+      [
+        "t5-link-out-validator"
+      ]
+    ]
+  },
+  {
+    "id": "t5-link-out-validator",
+    "type": "link out",
+    "z": "tab-testes",
+    "name": "-> Validador JSON Schema Tab 2",
+    "mode": "link",
+    "links": [
+      "t2-link-in-validator"
+    ],
+    "x": 680,
+    "y": 375,
+    "wires": []
+  },
+  {
+    "id": "t5-inj-run-analysis",
+    "type": "inject",
+    "z": "tab-testes",
+    "name": "Disparar Análise 60s Agora (CT-04/10)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "manual_analysis",
+    "payload": "",
+    "payloadType": "date",
+    "x": 190,
+    "y": 460,
+    "wires": [
+      [
+        "t5-link-out-analysis"
+      ]
+    ]
+  },
+  {
+    "id": "t5-link-out-analysis",
+    "type": "link out",
+    "z": "tab-testes",
+    "name": "-> Iniciar Análise Tab 2",
+    "mode": "link",
+    "links": [
+      "t2-link-in-test"
+    ],
+    "x": 470,
+    "y": 460,
+    "wires": []
+  },
+  {
+    "id": "t5-inj-sim-nominal",
+    "type": "inject",
+    "z": "tab-testes",
+    "name": "Simulador: Reset Nominal",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "nominal",
+    "payloadType": "str",
+    "x": 150,
+    "y": 530,
+    "wires": [
+      [
+        "t5-fn-sim-http"
+      ]
+    ]
+  },
+  {
+    "id": "t5-inj-sim-ct04",
+    "type": "inject",
+    "z": "tab-testes",
+    "name": "Simulador: CT-04 Chattering B1",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "ct04_chattering",
+    "payloadType": "str",
+    "x": 170,
+    "y": 575,
+    "wires": [
+      [
+        "t5-fn-sim-http"
+      ]
+    ]
+  },
+  {
+    "id": "t5-inj-sim-ct07",
+    "type": "inject",
+    "z": "tab-testes",
+    "name": "Simulador: CT-07 Emergência B4",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "ct07_estop",
+    "payloadType": "str",
+    "x": 170,
+    "y": 620,
+    "wires": [
+      [
+        "t5-fn-sim-http"
+      ]
+    ]
+  },
+  {
+    "id": "t5-inj-sim-ct08",
+    "type": "inject",
+    "z": "tab-testes",
+    "name": "Simulador: CT-08 Sobretemp B3",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "ct08_overtemp",
+    "payloadType": "str",
+    "x": 170,
+    "y": 665,
+    "wires": [
+      [
+        "t5-fn-sim-http"
+      ]
+    ]
+  },
+  {
+    "id": "t5-fn-sim-http",
+    "type": "function",
+    "z": "tab-testes",
+    "name": "Montar HTTP Injeção Simulador",
+    "func": "const cfg = global.get(\"plcConfig\") || {};\nconst simBase = (cfg.simApiUrl || \"http://plc-simulator:8001\").replace(/\\/$/, \"\");\nconst scenario = String(msg.payload || \"nominal\");\n\nconst mapping = {\n    nominal: { path: \"/reset\", body: { scenario: \"nominal\" } },\n    ct01_bounce: { path: \"/fault\", body: { test_case: \"CT-01\", pulse_ms: 25, channel: \"DI0\" } },\n    ct04_chattering: { path: \"/fault\", body: { test_case: \"CT-04\", scenario: \"chattering_b1\", active: true } },\n    ct05_high_level: { path: \"/fault\", body: { test_case: \"CT-05\", di_nivel_alto: true } },\n    ct07_estop: { path: \"/fault\", body: { test_case: \"CT-07\", di_emergencia_ok: false } },\n    ct08_overtemp: { path: \"/fault\", body: { test_case: \"CT-08\", di_sobretemp: true } }\n};\nconst spec = mapping[scenario] || mapping.nominal;\nmsg.url = simBase + spec.path;\nmsg.method = \"POST\";\nmsg.headers = { \"Content-Type\": \"application/json\" };\nmsg.payload = spec.body;\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 450,
+    "y": 595,
+    "wires": [
+      [
+        "t5-http-sim"
+      ]
+    ]
+  },
+  {
+    "id": "t5-http-sim",
+    "type": "http request",
+    "z": "tab-testes",
+    "name": "POST Simulador PLC500",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "timeout": "3000",
+    "x": 720,
+    "y": 595,
+    "wires": [
+      [
+        "t5-dbg-res"
+      ]
+    ]
+  },
+  {
+    "id": "t5-dbg-res",
+    "type": "debug",
+    "z": "tab-testes",
+    "name": "Resultado Testes Tab 5",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": true,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 960,
+    "y": 360,
+    "wires": []
+  }
+]
