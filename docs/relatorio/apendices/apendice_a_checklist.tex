@@ -21,7 +21,7 @@ Este apêndice consolida a sequência operacional recomendada para montagem, con
 \begin{enumerate}
   \item Configurar o IP estático \texttt{192.168.20.10/24} na interface \texttt{ETH1} e \texttt{192.168.10.10/24} na interface \texttt{ETH2}.
   \item Importar o pacote PLCopen TC6 XML v2.01 (\texttt{plc/\allowbreak codesys/\allowbreak plc500\_\allowbreak project\_\allowbreak plcopen.xml}) ou as cinco unidades em \textit{Structured Text} de \texttt{plc/src/} (\texttt{GVL\_\allowbreak Modbus.st}, \texttt{FB\_\allowbreak Debounce\allowbreak Counter.st}, \texttt{FB\_\allowbreak Watchdog\allowbreak Heartbeat.st}, \texttt{FB\_\allowbreak Safety\allowbreak Interlock.st} e \texttt{PLC\_\allowbreak PRG.st}), inserindo \texttt{Ethernet\_\allowbreak ETH2} e o dispositivo filho \texttt{ModbusTCP\_\allowbreak Server\_\allowbreak Device} (porta \texttt{502}, \textit{Unit ID} \texttt{1}) na árvore de dispositivos.
-  \item Mapear integralmente os 23 endereços base zero conforme a Tabela~\ref{tab:mapa_modbus} e o arquivo \texttt{plc/\allowbreak codesys/\allowbreak modbus\_\allowbreak mapping.csv}, habilitando a opção de atualização contínua das variáveis no ciclo de \texttt{MainTask} ($10\,\text{ms}$).
+  \item Mapear integralmente os 23 endereços base zero conforme o Quadro~\ref{quadro:mapa_modbus} e o arquivo \texttt{plc/\allowbreak codesys/\allowbreak modbus\_\allowbreak mapping.csv}, habilitando a opção de atualização contínua das variáveis no ciclo de \texttt{MainTask} ($10\,\text{ms}$).
   \item Compilar sem erros, realizar \textit{download} de \texttt{PLC\_PRG} (Quadro~\ref{quadro:codigo_st}), colocar o CLP em modo \texttt{RUN} e verificar \texttt{uiVersao\_Mapa = 100} no registrador \texttt{HR[3]}.
 \end{enumerate}
 

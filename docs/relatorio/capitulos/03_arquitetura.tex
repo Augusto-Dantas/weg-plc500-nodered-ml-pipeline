@@ -12,12 +12,12 @@ Este capítulo apresenta a arquitetura detalhada da solução, compreendendo a d
 \section{Arquitetura Geral em Camadas e Topologia de Rede}
 \label{sec:arq_geral}
 
-O sistema organiza-se em cinco camadas funcionais desacopladas: (i)~\textbf{Camada de Campo Simulada}, constituída por quatro botoeiras digitais e quatro LEDs operando em 24\,Vcc PNP; (ii)~\textbf{Camada de Controle Determinístico (OT)}, executada no WEG PLC500 sob CODESYS V3.5; (iii)~\textbf{Camada de Comunicação Industrial}, baseada no protocolo Modbus TCP/IP em sub-rede dedicada; (iv)~\textbf{Camada de Orquestração, Persistência e Análise Híbrida (IT)}, implementada em Node-RED, PostgreSQL e serviço LLM; e (v)~\textbf{Camada de Observabilidade e Relatórios}, encarregada do despacho automático de diagnósticos operacionais.
+O sistema organiza-se em cinco camadas funcionais desacopladas: (i)~Camada de Campo Simulada, constituída por quatro botoeiras digitais e quatro LEDs operando em 24\,Vcc PNP; (ii)~Camada de Controle Determinístico (OT), executada no WEG PLC500 sob CODESYS V3.5; (iii)~Camada de Comunicação Industrial, baseada no protocolo Modbus TCP/IP em sub-rede dedicada; (iv)~Camada de Orquestração, Persistência e Análise Híbrida (IT), implementada em Node-RED, PostgreSQL e serviço LLM; e (v)~Camada de Observabilidade e Relatórios, encarregada do despacho automático de diagnósticos operacionais.
 
 Aproveitando as duas interfaces Gigabit Ethernet independentes do WEG PLC500 \cite{weg_plc500_manual}, aplica-se a seguinte segmentação de rede \cite{stouffer_nist_ot}:
 \begin{itemize}
-  \item \textbf{Interface \texttt{ETH1} (Rede de Engenharia):} sub-rede \texttt{192.168.20.0/24}, com o CLP configurado no endereço \texttt{192.168.20.10/24}, reservada à estação de engenharia CODESYS V3.5 (\texttt{192.168.20.50/24}) para programação, depuração e monitoramento de variáveis.
-  \item \textbf{Interface \texttt{ETH2} (Rede de Supervisão Modbus TCP):} sub-rede dedicada \texttt{192.168.10.0/24}, na qual o WEG PLC500 opera como \textit{Modbus TCP Server} em \texttt{192.168.10.10:502} (\textit{Unit ID}~\texttt{1}) e o servidor contendo o Node-RED e o banco PostgreSQL opera em \texttt{192.168.10.20}. O acesso à porta TCP~502 é restrito por firewall exclusivamente ao host \texttt{192.168.10.20}.
+  \item Interface \texttt{ETH1} (Rede de Engenharia): sub-rede \texttt{192.168.20.0/24}, com o CLP configurado no endereço \texttt{192.168.20.10/24}, reservada à estação de engenharia CODESYS V3.5 (\texttt{192.168.20.50/24}) para programação, depuração e monitoramento de variáveis.
+  \item Interface \texttt{ETH2} (Rede de Supervisão Modbus TCP): sub-rede dedicada \texttt{192.168.10.0/24}, na qual o WEG PLC500 opera como \textit{Modbus TCP Server} em \texttt{192.168.10.10:502} (\textit{Unit ID}~\texttt{1}) e o servidor contendo o Node-RED e o banco PostgreSQL opera em \texttt{192.168.10.20}. O acesso à porta TCP~502 é restrito por firewall exclusivamente ao host \texttt{192.168.10.20}.
 \end{itemize}
 
 A Figura~\ref{fig:arquitetura-geral} representa a arquitetura integrada de camadas e o fluxo de sinais físicos, mensagens Modbus TCP/IP e estruturas analíticas.
@@ -138,83 +138,89 @@ A Figura~\ref{fig:arquitetura-geral} representa a arquitetura integrada de camad
 
 Para simular um subsistema industrial de transporte e controle de fluido sujeito a distúrbios operacionais, utilizam-se quatro das oito entradas digitais nativas e quatro das oito saídas digitais nativas de 24\,Vcc PNP do WEG PLC500, mantendo metade dos canais físicos como reserva para expansões futuras. No monorrepo do projeto, a documentação executiva completa dessa bancada encontra-se formalizada na lista de materiais \texttt{hardware/\allowbreak bom.csv}, na tabela de fiação \texttt{hardware/\allowbreak wiring\_\allowbreak table.md}, nos diagramas vetoriais CircuiTikZ/TikZ (\texttt{hardware/\allowbreak latex/\allowbreak schematic\_\allowbreak electrical.tex} e \texttt{schematic\_\allowbreak network\_\allowbreak bench.tex}, compilados em PDF, SVG e PNG de $300\,\text{DPI}$ em \texttt{hardware/\allowbreak diagrams/}) e no projeto eletrônico nativo do KiCad~8 (\texttt{hardware/\allowbreak kicad/\allowbreak plc500\_\allowbreak bench.kicad\_\allowbreak pro} e esquemático S-expression \texttt{plc500\_\allowbreak bench.kicad\_\allowbreak sch}).
 
-A Tabela~\ref{tab:mapeamento_io} especifica a função de cada canal, o tipo de contato elétrico, o endereço IEC 61131-3 e o papel no processo simulado. A entrada \texttt{DI3} (\texttt{B4\_Emergencia}) utiliza obrigatoriamente contato \textbf{Normalmente Fechado (NF)}: em operação normal, o borne recebe $+24\,\text{Vcc}$ (\texttt{TRUE}); tanto o pressionamento do botão quanto eventual rompimento do cabo derrubam o sinal para $0\,\text{Vcc}$ (\texttt{FALSE}), levando o CLP imediatamente ao estado de bloqueio seguro (\textit{fail-safe}) \cite{moraes_castrucci}.
+O Quadro~\ref{quadro:mapeamento_io} especifica a função de cada canal, o tipo de contato elétrico, o endereço IEC 61131-3 e o papel no processo simulado. A entrada \texttt{DI3} (\texttt{B4\_Emergencia}) utiliza obrigatoriamente contato Normalmente Fechado (NF): em operação normal, o borne recebe $+24\,\text{Vcc}$ (\texttt{TRUE}); tanto o pressionamento do botão quanto eventual rompimento do cabo derrubam o sinal para $0\,\text{Vcc}$ (\texttt{FALSE}), levando o CLP imediatamente ao estado de bloqueio seguro (\textit{fail-safe}) \cite{moraes_castrucci}.
 
-\begin{table}[htb]
+\begin{quadro}[htb]
   \centering
   \SingleSpacing
   \caption{Mapeamento das entradas (botoeiras) e saídas digitais (LEDs) nativas do WEG PLC500}
-  \label{tab:mapeamento_io}
+  \label{quadro:mapeamento_io}
   \footnotesize
-  \begin{tabularx}{\textwidth}{@{}p{1.05cm}p{1.2cm}p{3.0cm}p{1.25cm}p{1.7cm}L@{}}
-    \toprule
+  \begin{tabularx}{\textwidth}{|p{1.05cm}|p{1.2cm}|p{3.0cm}|p{1.25cm}|p{1.7cm}|L|}
+    \hline
     \textbf{Canal} & \textbf{IEC} & \textbf{Identificador} & \textbf{Tipo} & \textbf{Elemento} & \textbf{Semântica Industrial Simulada} \\
-    \midrule
+    \hline
     \texttt{DI0} & \texttt{\%IX0.0} & \texttt{B1\_SensPresenca} & NA (PNP) & Botoeira 1 & Sensor óptico/indutivo de passagem de peça na esteira (eventos de ciclo) \\
+    \hline
     \texttt{DI1} & \texttt{\%IX0.1} & \texttt{B2\_SensNivelAlto} & NA (PNP) & Botoeira 2 & Chave de nível máximo de reservatório (indica risco de transbordamento) \\
+    \hline
     \texttt{DI2} & \texttt{\%IX0.2} & \texttt{B3\_SensSobretemp} & NA (PNP) & Botoeira 3 & Termostato digital de sobretemperatura no conjunto motor-bomba \\
-    \texttt{DI3} & \texttt{\%IX0.3} & \texttt{B4\_Emergencia} & \textbf{NF} (PNP) & Botoeira 4 & Parada de emergência com lógica \textit{fail-safe} (\texttt{FALSE} = emergência ativa) \\
-    \midrule
+    \hline
+    \texttt{DI3} & \texttt{\%IX0.3} & \texttt{B4\_Emergencia} & NF (PNP) & Botoeira 4 & Parada de emergência com lógica \textit{fail-safe} (\texttt{FALSE} = emergência ativa) \\
+    \hline
     \texttt{DO0} & \texttt{\%QX0.0} & \texttt{L1\_AtuMotor} & PNP 24\,V & LED Verde & Comando do motor/esteira principal (desligado em falha crítica/emergência) \\
+    \hline
     \texttt{DO1} & \texttt{\%QX0.1} & \texttt{L2\_AtuValvula} & PNP 24\,V & LED Amarelo & Acionamento de válvula solenoide ou bomba auxiliar de alívio/resfriamento \\
+    \hline
     \texttt{DO2} & \texttt{\%QX0.2} & \texttt{L3\_SinalAlarme} & PNP 24\,V & LED Vermelho & Sinalizador óptico/sonoro de anomalia crítica, watchdog ou emergência \\
+    \hline
     \texttt{DO3} & \texttt{\%QX0.3} & \texttt{L4\_StatusOper} & PNP 24\,V & LED Branco & Indicador de operação normal com enlace Modbus TCP/IP saudável \\
-    \bottomrule
+    \hline
   \end{tabularx}
   \fonte{Elaborado pelos autores (2026).}
-\end{table}
+\end{quadro}
 
 Cada saída digital PNP de 24\,Vcc aciona um sinaleiro LED industrial de 24\,Vcc (ou LED discreto em série com resistor limitador de filme metálico de $2{,}2\,\text{k}\Omega$ / $0{,}5\,\text{W}$, dentro da faixa nominal de $1{,}8\,\text{k}\Omega$ a $2{,}2\,\text{k}\Omega$), resultando em corrente nominal de aproximadamente $10\,\text{mA}$ por canal.
 
 \section{Mapa de Registradores Modbus TCP/IP}
 \label{sec:arq_modbus}
 
-O contrato de memória entre o WEG PLC500 (\textit{Modbus TCP Server}) e o Node-RED (\textit{Modbus TCP Client}) segrega variáveis de leitura (\textit{Discrete Inputs} e \textit{Input Registers}) e variáveis de escrita supervisória (\textit{Coils} e \textit{Holding Registers}), adotando endereçamento base zero (\textit{0-based}) na PDU \cite{modbus_app_v11b3}. Esse contrato de 23 registradores é exportado de forma canônica em \texttt{plc/codesys/modbus\_mapping.csv} em paridade estrita com a lista de variáveis globais \texttt{plc/src/GVL\_Modbus.st}. A Tabela~\ref{tab:mapa_modbus} apresenta o mapeamento completo.
+O contrato de memória entre o WEG PLC500 (\textit{Modbus TCP Server}) e o Node-RED (\textit{Modbus TCP Client}) segrega variáveis de leitura (\textit{Discrete Inputs} e \textit{Input Registers}) e variáveis de escrita supervisória (\textit{Coils} e \textit{Holding Registers}), adotando endereçamento base zero (\textit{0-based}) na PDU \cite{modbus_app_v11b3}. Esse contrato de 23 registradores é exportado de forma canônica em \texttt{plc/codesys/modbus\_mapping.csv} em paridade estrita com a lista de variáveis globais \texttt{plc/src/GVL\_Modbus.st}. O Quadro~\ref{quadro:mapa_modbus} apresenta o mapeamento completo.
 
-\begin{table}[htb]
+\begin{quadro}[htb]
   \centering
   \SingleSpacing
   \caption{Mapa completo de registradores Modbus TCP/IP expostos pelo WEG PLC500 (Unit ID 1, porta 502)}
-  \label{tab:mapa_modbus}
-  \scriptsize
-  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}p{2.15cm}p{0.80cm}p{1.15cm}p{3.40cm}L@{}}
-    \toprule
+  \label{quadro:mapa_modbus}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{|>{\RaggedRight\arraybackslash}p{2.10cm}|p{0.80cm}|p{1.25cm}|p{3.60cm}|L|}
+    \hline
     \textbf{Área Modbus} & \textbf{End.} & \textbf{FC} & \textbf{Variável PLC500} & \textbf{Descrição Funcional e Faixa de Valores} \\
-    \midrule
-    \multirow{6}{2.15cm}{\RaggedRight\textit{Discrete Inputs} (Leitura, 1 bit)}
-      & \texttt{0} & \texttt{FC02} & \texttt{xDI\_Presenca} & Estado filtrado (\textit{debounce}) de \texttt{B1\_SensPresenca} \\
-      & \texttt{1} & \texttt{FC02} & \texttt{xDI\_NivelAlto} & Estado filtrado de \texttt{B2\_SensNivelAlto} \\
-      & \texttt{2} & \texttt{FC02} & \texttt{xDI\_Sobretemp} & Estado filtrado de \texttt{B3\_SensSobretemp} \\
-      & \texttt{3} & \texttt{FC02} & \texttt{xDI\_EmergenciaOK} & Estado físico NF de \texttt{B4\_Emergencia} (\texttt{0} = atuada/fio partido) \\
-      & \texttt{4} & \texttt{FC02} & \texttt{xFlag\_EmergTravada} & \texttt{1} se emergência travada aguardando rearme seguro \\
+    \hline
+    \multirow{6}{2.10cm}{\RaggedRight\textit{Discrete Inputs} (Leitura, 1 bit)}
+      & \texttt{0} & \texttt{FC02} & \texttt{xDI\_Presenca} & Estado filtrado (\textit{debounce}) de \texttt{B1\_SensPresenca} \\ \cline{2-5}
+      & \texttt{1} & \texttt{FC02} & \texttt{xDI\_NivelAlto} & Estado filtrado de \texttt{B2\_SensNivelAlto} \\ \cline{2-5}
+      & \texttt{2} & \texttt{FC02} & \texttt{xDI\_Sobretemp} & Estado filtrado de \texttt{B3\_SensSobretemp} \\ \cline{2-5}
+      & \texttt{3} & \texttt{FC02} & \texttt{xDI\_EmergenciaOK} & Estado físico NF de \texttt{B4\_Emergencia} (\texttt{0} = atuada/fio partido) \\ \cline{2-5}
+      & \texttt{4} & \texttt{FC02} & \texttt{xFlag\_EmergTravada} & \texttt{1} se emergência travada aguardando rearme seguro \\ \cline{2-5}
       & \texttt{5} & \texttt{FC02} & \texttt{xFlag\_WatchdogAtivo} & \texttt{1} se \textit{heartbeat} do Node-RED expirou ($> T_{wd}$) \\
-    \midrule
-    \multirow{5}{2.15cm}{\RaggedRight\textit{Coils} (Leitura e Escrita, 1 bit)}
-      & \texttt{0} & \texttt{FC01/05} & \texttt{xCmd\_Motor} & Comando supervisório do Node-RED para \texttt{L1\_AtuMotor} \\
-      & \texttt{1} & \texttt{FC01/05} & \texttt{xCmd\_Valvula} & Comando supervisório do Node-RED para \texttt{L2\_AtuValvula} \\
-      & \texttt{2} & \texttt{FC01/05} & \texttt{xCmd\_Alarme} & Comando supervisório do Node-RED para \texttt{L3\_SinalAlarme} \\
-      & \texttt{3} & \texttt{FC01/05} & \texttt{xCmd\_ResetFalha} & Pulso de rearme de falha (válido somente se \texttt{DI3=1} e \texttt{DI2=0}) \\
+    \hline
+    \multirow{5}{2.10cm}{\RaggedRight\textit{Coils} (Leitura e Escrita, 1 bit)}
+      & \texttt{0} & \texttt{FC01/05} & \texttt{xCmd\_Motor} & Comando supervisório do Node-RED para \texttt{L1\_AtuMotor} \\ \cline{2-5}
+      & \texttt{1} & \texttt{FC01/05} & \texttt{xCmd\_Valvula} & Comando supervisório do Node-RED para \texttt{L2\_AtuValvula} \\ \cline{2-5}
+      & \texttt{2} & \texttt{FC01/05} & \texttt{xCmd\_Alarme} & Comando supervisório do Node-RED para \texttt{L3\_SinalAlarme} \\ \cline{2-5}
+      & \texttt{3} & \texttt{FC01/05} & \texttt{xCmd\_ResetFalha} & Pulso de rearme de falha (válido somente se \texttt{DI3=1} e \texttt{DI2=0}) \\ \cline{2-5}
       & \texttt{4} & \texttt{FC01/05} & \texttt{xCmd\_HabRemoto} & Habilita modo automático supervisionado pelo Node-RED (\texttt{1} = ativo) \\
-    \midrule
-    \multirow{8}{2.15cm}{\RaggedRight\textit{Input Registers} (Leitura, 16 bits)}
-      & \texttt{0} & \texttt{FC04} & \texttt{uiCnt\_Presenca} & Contador acumulado de bordas de subida de \texttt{B1} (0--65535) \\
-      & \texttt{1} & \texttt{FC04} & \texttt{uiCnt\_NivelAlto} & Contador acumulado de acionamentos de \texttt{B2} (0--65535) \\
-      & \texttt{2} & \texttt{FC04} & \texttt{uiCnt\_Sobretemp} & Contador acumulado de acionamentos de \texttt{B3} (0--65535) \\
-      & \texttt{3} & \texttt{FC04} & \texttt{uiCnt\_Emergencia} & Contador acumulado de eventos de emergência em \texttt{B4} \\
-      & \texttt{4} & \texttt{FC04} & \texttt{uiEstado\_CLP} & Código da máquina de estados: \texttt{0}=INIT, \texttt{1}=AUTO, \texttt{2}=ALERTA, \texttt{3}=DEGRADADO, \texttt{4}=EMERG \\
-      & \texttt{5} & \texttt{FC04} & \texttt{wMascara\_DO\_Real} & Bitmask das saídas físicas reais (\texttt{bit0=DO0}..\texttt{bit3=DO3}) \\
-      & \texttt{6} & \texttt{FC04} & \texttt{uiEcho\_Heartbeat} & Eco do último valor de \textit{heartbeat} recebido do Node-RED \\
+    \hline
+    \multirow{8}{2.10cm}{\RaggedRight\textit{Input Registers} (Leitura, 16 bits)}
+      & \texttt{0} & \texttt{FC04} & \texttt{uiCnt\_Presenca} & Contador acumulado de bordas de subida de \texttt{B1} (0--65535) \\ \cline{2-5}
+      & \texttt{1} & \texttt{FC04} & \texttt{uiCnt\_NivelAlto} & Contador acumulado de acionamentos de \texttt{B2} (0--65535) \\ \cline{2-5}
+      & \texttt{2} & \texttt{FC04} & \texttt{uiCnt\_Sobretemp} & Contador acumulado de acionamentos de \texttt{B3} (0--65535) \\ \cline{2-5}
+      & \texttt{3} & \texttt{FC04} & \texttt{uiCnt\_Emergencia} & Contador acumulado de eventos de emergência em \texttt{B4} \\ \cline{2-5}
+      & \texttt{4} & \texttt{FC04} & \texttt{uiEstado\_CLP} & Código da máquina de estados: \texttt{0}=INIT, \texttt{1}=AUTO, \texttt{2}=ALERTA, \texttt{3}=DEGRADADO, \texttt{4}=EMERG \\ \cline{2-5}
+      & \texttt{5} & \texttt{FC04} & \texttt{wMascara\_DO\_Real} & Bitmask das saídas físicas reais (\texttt{bit0=DO0}..\texttt{bit3=DO3}) \\ \cline{2-5}
+      & \texttt{6} & \texttt{FC04} & \texttt{uiEcho\_Heartbeat} & Eco do último valor de \textit{heartbeat} recebido do Node-RED \\ \cline{2-5}
       & \texttt{7} & \texttt{FC04} & \texttt{uiCod\_Intertrav} & Causa de veto local: \texttt{0}=Nenhum, \texttt{1}=Emerg., \texttt{2}=Sobretemp., \texttt{3}=Watchdog \\
-    \midrule
-    \multirow{4}{2.15cm}{\RaggedRight\textit{Holding Registers} (Leitura e Escrita, 16 bits)}
-      & \texttt{0} & \texttt{FC03/06} & \texttt{uiHeartbeat\_NR} & Contador cíclico (1--65535) incrementado pelo Node-RED (alias \texttt{uiHeartbeat\_Sup}) \\
-      & \texttt{1} & \texttt{FC03/06} & \texttt{uiTimeout\_WD\_ms} & Limiar configurável do \textit{watchdog} em ms (padrão: \texttt{5000}) \\
-      & \texttt{2} & \texttt{FC03/06} & \texttt{uiSeveridade\_IA} & Severidade reportada pela pipeline: \texttt{0}=NORMAL, \texttt{1}=ATENCAO, \texttt{2}=CRITICO, \texttt{3}=EMERG \\
+    \hline
+    \multirow{4}{2.10cm}{\RaggedRight\textit{Holding Registers} (Leitura e Escrita, 16 bits)}
+      & \texttt{0} & \texttt{FC03/06} & \texttt{uiHeartbeat\_NR} & Contador cíclico (1--65535) incrementado pelo Node-RED (alias \texttt{uiHeartbeat\_Sup}) \\ \cline{2-5}
+      & \texttt{1} & \texttt{FC03/06} & \texttt{uiTimeout\_WD\_ms} & Limiar configurável do \textit{watchdog} em ms (padrão: \texttt{5000}) \\ \cline{2-5}
+      & \texttt{2} & \texttt{FC03/06} & \texttt{uiSeveridade\_IA} & Severidade reportada pela pipeline: \texttt{0}=NORMAL, \texttt{1}=ATENCAO, \texttt{2}=CRITICO, \texttt{3}=EMERG \\ \cline{2-5}
       & \texttt{3} & \texttt{FC03/06} & \texttt{uiVersao\_Mapa} & Identificador de versão do contrato de mapa (valor fixo \texttt{100} = v1.0) \\
-    \bottomrule
+    \hline
   \end{tabularx}
   \fonte{Elaborado pelos autores (2026).}
-\end{table}
+\end{quadro}
 
 A leitura combinada de \texttt{wMascara\_DO\_Real} (\textit{Input Register}~\texttt{5}) e \texttt{uiCod\_Intertrav} (\textit{Input Register}~\texttt{7}) permite ao Node-RED auditar em malha fechada se o comando enviado aos \textit{Coils} foi efetivamente aplicado aos LEDs físicos ou se sofreu veto legítimo pelo intertravamento local do CLP.
 

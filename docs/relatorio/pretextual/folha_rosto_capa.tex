@@ -7,27 +7,27 @@
 \renewcommand{\imprimircapa}{%
   \begin{capa}%
     \center
-    {\ABNTEXchapterfont\large\imprimirinstituicao}
+    {\rmfamily\normalsize\MakeUppercase{\imprimirinstituicao}}
 
     \vspace*{1.5cm}
 
-    {\let\and\par\ABNTEXchapterfont\large\imprimirautor}
+    {\let\and\par\rmfamily\normalsize\MakeUppercase{\imprimirautor}}
 
     \vfill
 
     \begin{center}
-      \ABNTEXchapterfont\bfseries\LARGE\imprimirtitulo
+      \rmfamily\bfseries\normalsize\MakeUppercase{\imprimirtitulo}
     \end{center}
 
     \vspace*{0.8cm}
 
-    {\normalsize\codigorelatorio\ -- \versaorelatorio}
+    {\rmfamily\normalsize\codigorelatorio\ -- \versaorelatorio}
 
     \vfill
 
-    {\large\imprimirlocal}
+    {\rmfamily\normalsize\imprimirlocal}
     \par
-    {\large\imprimirdata}
+    {\rmfamily\normalsize\imprimirdata}
     \vspace*{1cm}
   \end{capa}%
 }
@@ -36,21 +36,17 @@
 \makeatletter
 \renewcommand{\folhaderostocontent}{%
   \begin{center}
-    {\ABNTEXchapterfont\large\imprimirinstituicao}
+    {\rmfamily\normalsize\MakeUppercase{\imprimirinstituicao}}
 
     \vspace*{1.2cm}
 
-    {\let\and\par\ABNTEXchapterfont\large\imprimirautor}
+    {\let\and\par\rmfamily\normalsize\MakeUppercase{\imprimirautor}}
 
     \vspace*{\fill}\vspace*{\fill}
 
     \begin{center}
-      \ABNTEXchapterfont\bfseries\Large\imprimirtitulo
+      \rmfamily\bfseries\normalsize\MakeUppercase{\imprimirtitulo}
     \end{center}
-
-    \vspace*{0.6cm}
-
-    {\small\textbf{Identificação:} \codigorelatorio\ (\versaorelatorio) \quad|\quad \textbf{Classificação:} \classificacaodoc}
 
     \vspace*{\fill}
 
@@ -58,20 +54,21 @@
       \hspace{.45\textwidth}
       \begin{minipage}{.5\textwidth}
         \SingleSpacing
+        \footnotesize
         \imprimirpreambulo
       \end{minipage}%
       \vspace*{\fill}
     }%
 
     {\abntex@ifnotempty{\imprimirorientador}{%
-      \imprimirorientadorRotulo~\imprimirorientador\par
+      \rmfamily\normalsize\imprimirorientadorRotulo~\imprimirorientador\par
     }}
 
     \vspace*{\fill}
 
-    {\large\imprimirlocal}
+    {\rmfamily\normalsize\imprimirlocal}
     \par
-    {\large\imprimirdata}
+    {\rmfamily\normalsize\imprimirdata}
     \vspace*{1cm}
   \end{center}
 }

@@ -4,15 +4,30 @@
 % Compatível com pdflatex + abntex2 (Overleaf e TeX Live padrão)
 % ==============================================================================
 
-% --- Codificação e fontes ---
+% --- Codificação e fontes (Times New Roman conforme ABNT) ---
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{newtxtext,newtxmath} % Família Times, uniforme em todo o documento
+\renewcommand{\rmdefault}{ptm}
+\renewcommand{\ttdefault}{lmtt}
+\usepackage[scaled=0.92]{helvet}
 \usepackage{indentfirst}
 \usepackage{microtype}
 \usepackage{xcolor}
 \usepackage{graphicx}
 \usepackage{etoolbox}
+
+% --- Tipografia ABNT uniforme (Times New Roman 12pt em todo o texto e seções) ---
+\setboolean{ABNTEXuppersection}{true}
+\renewcommand{\ABNTEXchapterfont}{\rmfamily\bfseries}
+\renewcommand{\ABNTEXchapterfontsize}{\normalsize}
+\renewcommand{\ABNTEXsectionfont}{\rmfamily}
+\renewcommand{\ABNTEXsectionfontsize}{\normalsize}
+\renewcommand{\ABNTEXsubsectionfont}{\rmfamily\bfseries}
+\renewcommand{\ABNTEXsubsectionfontsize}{\normalsize}
+\renewcommand{\ABNTEXsubsubsectionfont}{\rmfamily}
+\renewcommand{\ABNTEXsubsubsectionfontsize}{\normalsize}
+\renewcommand{\ABNTEXsubsubsubsectionfont}{\rmfamily\itshape}
+\renewcommand{\ABNTEXsubsubsubsectionfontsize}{\normalsize}
 
 % --- Matemática e símbolos ---
 \usepackage{amsmath}
@@ -175,7 +190,7 @@
 \setlength{\parskip}{0pt}
 \setlength{\emergencystretch}{3em}
 
-% --- Configuração de cores para links do PDF (sóbrio para impressão/leitura) ---
+% --- Configuração de cores para links do PDF (texto preto conforme ABNT) ---
 \pdfstringdefDisableCommands{%
   \def\uppercase#1{#1}%
   \def\MakeUppercase#1{#1}%

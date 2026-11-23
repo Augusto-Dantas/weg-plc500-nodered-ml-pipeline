@@ -11,12 +11,12 @@ Em coerência com a delimitação estabelecida na Seção~\ref{sec:escopo}, este
 \section{Configuração do Ambiente de Ensaios em Bancada e Gêmeo Digital SIL}
 \label{sec:val_ambiente}
 
-A validação integral da arquitetura contempla tanto o comissionamento físico na bancada didático-industrial quanto a verificação automatizada \textbf{\textit{Software-in-the-Loop} (SIL)} por meio do gêmeo digital determinístico implementado em \texttt{python/\allowbreak plc500\_\allowbreak ml/\allowbreak plc\_\allowbreak simulator.py}:
+A validação integral da arquitetura contempla tanto o comissionamento físico na bancada didático-industrial quanto a verificação automatizada \textit{Software-in-the-Loop} (SIL) por meio do gêmeo digital determinístico implementado em \texttt{python/\allowbreak plc500\_\allowbreak ml/\allowbreak plc\_\allowbreak simulator.py}:
 \begin{itemize}
-  \item \textbf{Controlador WEG PLC500 ou Gêmeo Digital (\texttt{plc\_\allowbreak simulator.py}):} na bancada física, utiliza-se o WEG PLC500 alimentado em 24\,Vcc com \texttt{PLC\_PRG} (Quadro~\ref{quadro:codigo_st}) carregado via \texttt{ETH1} (\texttt{192.168.20.10}) e servidor Modbus TCP/IP ativo em \texttt{ETH2} (\texttt{192.168.10.10:502}). Na verificação automatizada SIL, o simulador \texttt{plc\_\allowbreak simulator.py} (baseado em \texttt{pymodbus}) reproduz com ciclo de varredura de $10\,\text{ms}$ os 23 registradores base zero, o filtro \textit{debounce} \texttt{TON} de $50\,\text{ms}$ em \texttt{DI0..DI2}, a leitura imediata NF em \texttt{DI3}, o \textit{watchdog} configurável em $[2000, 30000]\,\text{ms}$ e a hierarquia estrita de intertravamento de \texttt{FB\_\allowbreak Safety\allowbreak Interlock.st}.
-  \item \textbf{Camada de campo (botoeiras e LEDs):} quatro botoeiras industriais (três NA em \texttt{DI0}--\texttt{DI2} e uma botoeira tipo cogumelo com trava NF em \texttt{DI3}) e quatro sinalizadores LED de 24\,Vcc com resistores limitadores de $2{,}2\,\text{k}\Omega$ conectados em \texttt{DO0}--\texttt{DO3}, conforme a Tabela~\ref{tab:mapeamento_io} e a documentação executiva em \texttt{hardware/}.
-  \item \textbf{Pilha IT (Node-RED v4, PostgreSQL 16 e FastAPI ML):} servidor local (\texttt{192.168.10.20}) executando o fluxo de cinco abas (\texttt{node-red/\allowbreak flows.json}), o banco \textbf{PostgreSQL~16} inicializado com \texttt{node-red/\allowbreak sql/\allowbreak init.sql} (Quadro~\ref{quadro:ddl_sql}), o microsserviço \textbf{FastAPI / scikit-learn} (\texttt{python/\allowbreak plc500\_\allowbreak ml/\allowbreak api.py}) carregado com os modelos treinados em \texttt{python/\allowbreak models/} sobre o dataset sintético de $18\,\text{h}$ a $2\,\text{Hz}$ ($129.600$ amostras brutas e $3.688$ janelas de $60\,\text{s}$ com \textit{stride} de $15\,\text{s}$ e lacunas de purga $\ge 60\,\text{s}$ nas partições $65\%/15\%/20\%$, atingindo ROC-AUC de teste de $0{,}8993$ no \texttt{Isolation\allowbreak Forest} e acurácia de $99{,}73\%$ / Macro-F1 de $0{,}9956$ no \texttt{HistGradient\allowbreak Boosting\allowbreak Classifier} frente ao \texttt{RandomForest\allowbreak Classifier}) e conectividade para o endpoint LLM.
-  \item \textbf{Parâmetros nominais de ensaio:} ciclo do CLP de $10\,\text{ms}$, \textit{debounce} $T_{db} = 50\,\text{ms}$, \textit{polling} Modbus $T_p = 500\,\text{ms}$, janela deslizante $W = 60\,\text{s}$ (\textit{stride} $15\,\text{s}$) e \textit{watchdog} $T_{wd} = 5000\,\text{ms}$.
+  \item Controlador WEG PLC500 ou Gêmeo Digital (\texttt{plc\_\allowbreak simulator.py}): na bancada física, utiliza-se o WEG PLC500 alimentado em 24\,Vcc com \texttt{PLC\_PRG} (Quadro~\ref{quadro:codigo_st}) carregado via \texttt{ETH1} (\texttt{192.168.20.10}) e servidor Modbus TCP/IP ativo em \texttt{ETH2} (\texttt{192.168.10.10:502}). Na verificação automatizada SIL, o simulador \texttt{plc\_\allowbreak simulator.py} (baseado em \texttt{pymodbus}) reproduz com ciclo de varredura de $10\,\text{ms}$ os 23 registradores base zero, o filtro \textit{debounce} \texttt{TON} de $50\,\text{ms}$ em \texttt{DI0..DI2}, a leitura imediata NF em \texttt{DI3}, o \textit{watchdog} configurável em $[2000, 30000]\,\text{ms}$ e a hierarquia estrita de intertravamento de \texttt{FB\_\allowbreak Safety\allowbreak Interlock.st}.
+  \item Camada de campo (botoeiras e LEDs): quatro botoeiras industriais (três NA em \texttt{DI0}--\texttt{DI2} e uma botoeira tipo cogumelo com trava NF em \texttt{DI3}) e quatro sinalizadores LED de 24\,Vcc com resistores limitadores de $2{,}2\,\text{k}\Omega$ conectados em \texttt{DO0}--\texttt{DO3}, conforme o Quadro~\ref{quadro:mapeamento_io} e a documentação executiva em \texttt{hardware/}.
+  \item Pilha IT (Node-RED v4, PostgreSQL 16 e FastAPI ML): servidor local (\texttt{192.168.10.20}) executando o fluxo de cinco abas (\texttt{node-red/\allowbreak flows.json}), o banco PostgreSQL~16 inicializado com \texttt{node-red/\allowbreak sql/\allowbreak init.sql} (Quadro~\ref{quadro:ddl_sql}), o microsserviço FastAPI / scikit-learn (\texttt{python/\allowbreak plc500\_\allowbreak ml/\allowbreak api.py}) carregado com os modelos treinados em \texttt{python/\allowbreak models/} sobre o dataset sintético de $18\,\text{h}$ a $2\,\text{Hz}$ ($129.600$ amostras brutas e $3.688$ janelas de $60\,\text{s}$ com \textit{stride} de $15\,\text{s}$ e lacunas de purga $\ge 60\,\text{s}$ nas partições $65\%/15\%/20\%$, atingindo ROC-AUC de teste de $0{,}8993$ no \texttt{Isolation\allowbreak Forest} e acurácia de $99{,}73\%$ / Macro-F1 de $0{,}9956$ no \texttt{HistGradient\allowbreak Boosting\allowbreak Classifier} frente ao \texttt{RandomForest\allowbreak Classifier}) e conectividade para o endpoint LLM.
+  \item Parâmetros nominais de ensaio: ciclo do CLP de $10\,\text{ms}$, \textit{debounce} $T_{db} = 50\,\text{ms}$, \textit{polling} Modbus $T_p = 500\,\text{ms}$, janela deslizante $W = 60\,\text{s}$ (\textit{stride} $15\,\text{s}$) e \textit{watchdog} $T_{wd} = 5000\,\text{ms}$.
 \end{itemize}
 
 \section{Casos de Teste Funcionais, Analíticos e de Segurança}
@@ -29,7 +29,7 @@ O Quadro~\ref{quadro:casos_teste} especifica os dez casos de teste obrigatórios
   \SingleSpacing
   \caption{Protocolo de casos de teste funcionais, analíticos e de segurança para validação em bancada}
   \label{quadro:casos_teste}
-  \scriptsize
+  \footnotesize
   \begin{tabularx}{\textwidth}{|p{1.05cm}|p{2.45cm}|L|L|}
     \hline
     \textbf{ID} & \textbf{Cenário} & \textbf{Procedimento de Estímulo em Bancada} & \textbf{Resultado Esperado (Critério de Aprovação)} \\
@@ -95,7 +95,7 @@ A integração entre protocolos industriais legados e agentes baseados em IA exi
   \SingleSpacing
   \caption{Matriz de análise de riscos técnicos e mecanismos de mitigação incorporados ao projeto}
   \label{quadro:riscos}
-  \scriptsize
+  \footnotesize
   \begin{tabularx}{\textwidth}{|p{2.6cm}|p{1.3cm}|L|L|}
     \hline
     \textbf{Risco Identificado} & \textbf{Impacto} & \textbf{Causa Raiz Potencial} & \textbf{Mitigação Arquitetural Adotada} \\
