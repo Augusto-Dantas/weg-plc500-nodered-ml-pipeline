@@ -14,7 +14,7 @@
 
 ## Como Compilar o PDF
 
-### Opção 1 — Compilação Direta via TinyTeX Local (Já Instalado)
+### Opção 1 — Compilação Direta via TinyTeX
 ```bash
 PATH="$HOME/.TinyTeX/bin/x86_64-linux:$PATH" make pdf
 ```
